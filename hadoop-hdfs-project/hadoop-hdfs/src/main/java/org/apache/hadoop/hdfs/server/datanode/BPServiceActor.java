@@ -24,6 +24,11 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
+import java.net.Socket;         //added for test
+import java.io.DataInputStream; //added for test
+import java.io.DataOutputStream; //added for test
+import java.io.InputStreamReader; //added for test
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -57,6 +62,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
+import org.apache.hadoop.hdfs.server.protocol.AppRegisterTable;
+
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -440,6 +447,10 @@ class BPServiceActor implements Runnable {
   
   HeartbeatResponse sendHeartBeat(boolean requestBlockReportLease)
       throws IOException {
+    //*******************************************************************************
+    //test for application registration table from namenode
+    run_fetchAppRegisterTable();
+    //*******************************************************************************
     scheduler.scheduleNextHeartbeat();
     StorageReport[] reports =
         dn.getFSDataset().getStorageReports(bpos.getBlockPoolId());
@@ -462,6 +473,32 @@ class BPServiceActor implements Runnable {
         numFailedVolumes,
         volumeFailureSummary,
         requestBlockReportLease);
+  }
+
+  /**
+   * Added for the application registration table from Namenode 
+   */
+  void run_fetchAppRegisterTable()throws IOException{
+    AppRegisterTable t= bpNamenode.fetchAppRegisterTable(bpRegistration,"");
+    String [] tt=t.getTable();
+    Socket socket=null;
+    try{
+        socket = new Socket("127.0.0.1",10000);
+        DataOutputStream out= new DataOutputStream(socket.getOutputStream());
+        out.writeUTF(tt[0]);
+        out.close();
+    }
+    catch(Exception e){
+    }
+    finally{
+        if(socket != null){
+            try{
+                socket.close();
+            }catch(IOException e){
+                socket=null;
+            }
+        }
+    }
   }
 
   @VisibleForTesting

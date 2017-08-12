@@ -119,6 +119,15 @@ public interface DatanodeProtocol {
       throws IOException;
 
   /**
+   * fetchAppRegisterTable() is used to fetch the Application
+   * Register information table from the Namenode,which includes
+   * applicationid,userid,application 
+   */
+  @Idempotent
+  public AppRegisterTable fetchAppRegisterTable(DatanodeRegistration registration,
+                                                   String request) throws IOException;
+
+  /**
    * blockReport() tells the NameNode about all the locally-stored blocks.
    * The NameNode returns an array of Blocks that have become obsolete
    * and should be deleted.  This function is meant to upload *all*

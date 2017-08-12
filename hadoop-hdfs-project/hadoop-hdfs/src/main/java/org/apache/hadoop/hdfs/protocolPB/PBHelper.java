@@ -44,6 +44,9 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDele
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableRequestProto; //Added for App registration table 
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableProto; //Added for App registration table 
+
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
@@ -100,6 +103,7 @@ import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
+import org.apache.hadoop.hdfs.server.protocol.AppRegisterTable;    //Added for application registration table
 
 /**
  * Utilities for converting protobuf classes to and from implementation classes
@@ -186,6 +190,14 @@ public class PBHelper {
         datanodeUuids.toArray(new String[datanodeUuids.size()]),
         storageUuids.toArray(new String[storageUuids.size()]),
         PBHelperClient.convertStorageTypes(storageTypes, storageUuids.size()));
+  }
+
+  /**
+   * For application registration table  
+   */
+  public static AppRegisterTable convert(AppRegisterTableProto b){
+    final List<String> appregistertable=b.getTableList();
+    return new AppRegisterTable(appregistertable.toArray(new String[appregistertable.size()]));
   }
 
   public static BlocksWithLocationsProto convert(BlocksWithLocations blks) {

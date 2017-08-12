@@ -46,6 +46,10 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterData
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageBlockReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReceivedDeletedBlocksProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableProto;          //added for application registration table
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableRequestProto;   //added for application registration table 
+
+
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionRequestProto;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -59,6 +63,8 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
+import org.apache.hadoop.hdfs.server.protocol.AppRegisterTable;    //added for application registration table
+
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
@@ -125,6 +131,21 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       throw ProtobufHelper.getRemoteException(se);
     }
     return PBHelper.convert(resp.getRegistration());
+  }
+
+  @Override
+  public AppRegisterTable fetchAppRegisterTable(DatanodeRegistration registration,
+          String request) throws IOException{
+    AppRegisterTableRequestProto.Builder builder = AppRegisterTableRequestProto
+        .newBuilder().setRegistration(PBHelper.convert(registration))
+        .setRequest(request);
+    AppRegisterTableProto resp;
+    try{
+      resp = rpcProxy.fetchAppRegisterTable(NULL_CONTROLLER, builder.build());  
+    }catch (ServiceException se)  {
+        throw ProtobufHelper.getRemoteException(se);
+    }
+    return PBHelper.convert(resp);
   }
 
   @Override

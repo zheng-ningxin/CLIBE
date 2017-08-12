@@ -367,6 +367,19 @@ message CommitBlockSynchronizationRequestProto {
 }
 
 /**
+ * Get Application register table from Namenode
+ */
+message AppRegisterTableRequestProto{
+  required DatanodeRegistrationProto registration = 1; // Datanode info
+  optional string request = 2;
+}
+
+message AppRegisterTableProto{
+  repeated string table = 1;
+}
+
+
+/**
  * void response
  */
 message CommitBlockSynchronizationResponseProto {
@@ -377,6 +390,11 @@ message CommitBlockSynchronizationResponseProto {
  * See the request and response for details of rpc call.
  */
 service DatanodeProtocolService {
+  /**
+   *Fetch the application Register table from the Namenode
+   */
+  rpc fetchAppRegisterTable(AppRegisterTableRequestProto)
+      returns(AppRegisterTableProto);
   /**
    * Register a datanode at a namenode
    */

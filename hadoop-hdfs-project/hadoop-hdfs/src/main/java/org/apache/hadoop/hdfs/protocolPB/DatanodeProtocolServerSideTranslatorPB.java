@@ -44,6 +44,11 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlo
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageBlockReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReceivedDeletedBlocksProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableProto;           //added for application register table 
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableRequestProto;    //added for application register table 
+
+
+
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RollingUpgradeStatusProto;
@@ -60,6 +65,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
+import org.apache.hadoop.hdfs.server.protocol.AppRegisterTable;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.RpcController;
@@ -104,6 +110,26 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     }
     return RegisterDatanodeResponseProto.newBuilder()
         .setRegistration(PBHelper.convert(registrationResp)).build();
+  }
+
+  @Override
+  public AppRegisterTableProto fetchAppRegisterTable(
+      RpcController controller, AppRegisterTableRequestProto request)
+      throws ServiceException{
+    DatanodeRegistration registration = PBHelper.convert(request.getRegistration());
+    String requestfromdatanode = request.getRequest();
+    AppRegisterTable registertable;
+    try{
+      registertable=impl.fetchAppRegisterTable(registration,requestfromdatanode);
+    } catch (IOException e){
+      throw new ServiceException(e);  
+    }
+    AppRegisterTableProto.Builder builder=AppRegisterTableProto.newBuilder();
+    String [] table=registertable.getTable();
+    for(int i=0; i<table.length ;i++){
+        builder.addTable(table[i]);
+    }
+    return builder.build();
   }
 
   @Override

@@ -152,6 +152,9 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
+import org.apache.hadoop.hdfs.server.protocol.AppRegisterTable;
+
+
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -1398,6 +1401,16 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     return namesystem.handleHeartbeat(nodeReg, report,
         dnCacheCapacity, dnCacheUsed, xceiverCount, xmitsInProgress,
         failedVolumes, volumeFailureSummary, requestFullBlockReportLease);
+  }
+  /**
+   * added for application registration table 
+   */
+  @Override //DatanodeProtocol
+  public AppRegisterTable fetchAppRegisterTable(DatanodeRegistration nodeReg,
+          String request) throws IOException{
+      String [] apptable={"app01,user01,80","app02,user01,20","app01,user02,100"};
+      AppRegisterTable reTable=new AppRegisterTable(apptable);
+      return reTable;
   }
 
   @Override // DatanodeProtocol
