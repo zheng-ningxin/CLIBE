@@ -43,6 +43,16 @@ import "inotify.proto";
  * The exceptions declared in the above class also apply to this protocol.
  * Exceptions are unwrapped and thrown by the  PB libraries.
  */
+message RegisterApplicationRequestProto {
+  required string userId = 1;
+  required string clientName = 2;
+  required string appId = 3;
+  required uint32 appQuota =4; 
+}
+
+message RegisterApplicationResponseProto {
+  required uint32 result = 1;
+}
 
 message GetBlockLocationsRequestProto {
   required string src = 1;     // file name
@@ -743,6 +753,8 @@ message GetEditsFromTxidResponseProto {
 }
 
 service ClientNamenodeProtocol {
+  rpc registerApplication(RegisterApplicationRequestProto)
+      returns(RegisterApplicationResponseProto);
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
   rpc getServerDefaults(GetServerDefaultsRequestProto)

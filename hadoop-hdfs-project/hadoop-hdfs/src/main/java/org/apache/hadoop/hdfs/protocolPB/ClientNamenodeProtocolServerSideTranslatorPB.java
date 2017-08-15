@@ -154,6 +154,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Recove
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RecoverLeaseResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshNodesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshNodesResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RegisterApplicationRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RegisterApplicationResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCacheDirectiveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCacheDirectiveResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCachePoolRequestProto;
@@ -368,7 +370,20 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throws IOException {
     this.server = server;
   }
-
+  
+  @Override
+  public RegisterApplicationResponseProto registerApplication(
+      RpcController controller, RegisterApplicationRequestProto req)
+      throws ServiceException{
+    try {
+      int result = server.registerApplication(req.getUserId(), req.getClientName(),
+          req.getAppId(), req.getAppQuota());
+      return RegisterApplicationResponseProto.newBuilder().setResult(result).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+  
   @Override
   public GetBlockLocationsResponseProto getBlockLocations(
       RpcController controller, GetBlockLocationsRequestProto req)

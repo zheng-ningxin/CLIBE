@@ -319,6 +319,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     ProxyAndInfo<ClientProtocol> proxyInfo = null;
     AtomicBoolean nnFallbackToSimpleAuth = new AtomicBoolean(false);
 
+    //print conf information
+    // for (Map.Entry<String, String> entry: conf) {
+    //     System.out.printf("%s=%s\n", entry.getKey(), entry.getValue());
+    // }
+
     if (numResponseToDrop > 0) {
       // This case is used for testing.
       LOG.warn(DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY
@@ -345,6 +350,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       this.dtService = proxyInfo.getDelegationTokenService();
       this.namenode = proxyInfo.getProxy();
     }
+    
+    String AppId = conf.get("IOcontrol.AppId","DefaultAppId");
+    int AppQuota = conf.getInt("IOcontrol.AppQuota",0);
+    //LOG.info("dfsclient "+AppId);
+    //LOG.info("dfsclient "+AppQuota);
+    // register
+    
+    this.namenode.registerApplication(ugi.toString(),clientName,AppId,AppQuota);
 
     String localInterfaces[] =
         conf.getTrimmedStrings(DFS_CLIENT_LOCAL_INTERFACES);

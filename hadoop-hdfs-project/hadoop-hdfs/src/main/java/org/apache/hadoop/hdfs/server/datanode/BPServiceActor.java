@@ -483,9 +483,16 @@ class BPServiceActor implements Runnable {
     String [] tt=t.getTable();
     Socket socket=null;
     try{
+
         socket = new Socket("127.0.0.1",10000);
         DataOutputStream out= new DataOutputStream(socket.getOutputStream());
-        out.writeUTF(tt[0]);
+        String tablesize=Integer.toString(tt.length);
+        out.writeUTF(tablesize+"\n");
+        for(int i=0;i<tt.length;i++){
+            //out.println(tt[i]);out.flush();
+            out.writeUTF(tt[i]+"\n");
+        }
+        out.writeUTF("!!!!!!!!!!!!!!!!!!!!!\n\n");
         out.close();
     }
     catch(Exception e){

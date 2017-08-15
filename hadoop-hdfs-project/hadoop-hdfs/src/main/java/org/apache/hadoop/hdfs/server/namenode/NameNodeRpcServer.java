@@ -662,6 +662,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       RetryCache.setState(cacheEntry, success);
     }
   }
+  //action : register application 
+  @Override // ClientProtocol
+  public int registerApplication(String userId, String clientName, String appId, int appQuota) 
+      throws IOException {
+    return nn.registerApplication(userId, clientName, appId, appQuota);
+  }
 
   @Override // ClientProtocol
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
@@ -1408,8 +1414,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override //DatanodeProtocol
   public AppRegisterTable fetchAppRegisterTable(DatanodeRegistration nodeReg,
           String request) throws IOException{
-      String [] apptable={"app01,user01,80","app02,user01,20","app01,user02,100"};
-      AppRegisterTable reTable=new AppRegisterTable(apptable);
+      //String [] apptable={"app01,user01,80","app02,user01,20","app01,user02,100"};
+      String [] apptable=nn.GetApplicationRegistrationTable();
+      AppRegisterTable reTable;
+      if(apptable.length!=0)
+        reTable=new AppRegisterTable(apptable);
+      else{
+        String [] noapp={"No applicaiton until now\n"};
+        reTable=new AppRegisterTable(noapp);
+      }
       return reTable;
   }
 

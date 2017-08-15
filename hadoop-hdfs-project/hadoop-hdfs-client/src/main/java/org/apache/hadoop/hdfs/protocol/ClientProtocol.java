@@ -92,6 +92,9 @@ public interface ClientProtocol {
    */
   long versionID = 69L;
 
+  @Idempotent
+  int registerApplication(String userId, String clientName, String appId, int appQuota)
+    throws IOException;
   ///////////////////////////////////////
   // File contents
   ///////////////////////////////////////

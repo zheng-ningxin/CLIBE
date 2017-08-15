@@ -137,6 +137,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Modify
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ModifyCachePoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RecoverLeaseRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshNodesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RegisterApplicationRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RegisterApplicationResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCacheDirectiveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCachePoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UnsetStoragePolicyRequestProto;
@@ -241,7 +243,24 @@ public class ClientNamenodeProtocolTranslatorPB implements
   public void close() {
     RPC.stopProxy(rpcProxy);
   }
-
+  
+  @Override
+  public int registerApplication(String userId, String clientName, String appId, int appQuota)
+      throws IOException{
+    RegisterApplicationRequestProto req = RegisterApplicationRequestProto
+        .newBuilder()
+        .setUserId(userId)
+        .setClientName(clientName)
+        .setAppId(appId)
+        .setAppQuota(appQuota)
+        .build();
+    try {
+      return rpcProxy.registerApplication(null, req).getResult();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+  
   @Override
   public LocatedBlocks getBlockLocations(String src, long offset, long length)
       throws IOException {

@@ -37,6 +37,7 @@ import java.net.InetSocketAddress;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -56,6 +57,7 @@ import java.util.StringTokenizer;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -1212,6 +1214,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (get(name) == null) {
       set(name, value);
     }
+  }
+  
+  public void setIOAppQuota(int AppQuota){
+    setInt("IOcontrol.AppQuota",AppQuota);
+    Timestamp ts = new Timestamp(System.currentTimeMillis());
+    set("IOcontrol.AppId","Application_"+ts+"_"+
+        ThreadLocalRandom.current().nextInt()  + "_" +
+        Thread.currentThread().getId());
   }
   
   private synchronized Properties getOverlay() {

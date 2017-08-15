@@ -95,6 +95,8 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -183,8 +185,33 @@ import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
  * used by secondary namenodes or rebalancing processes to get partial
  * NameNode state, for example partial blocksMap etc.
  **********************************************************/
+
 @InterfaceAudience.Private
 public class NameNode implements NameNodeStatusMXBean {
+  class DfsClientInfo{
+    private String UserId;
+    private String AppId;
+    private int AppQuota;
+    public DfsClientInfo(String UserId, String AppId, int AppQuota){
+        this.UserId = UserId;
+        this.AppId = AppId;
+        this.AppQuota = AppQuota;
+    }
+    public DfsClientInfo(){
+        this.UserId = "defaultUser";
+        this.AppId = "defaultAppId";
+        this.AppQuota = 50;
+    }
+    public String getUserId(){
+        return UserId;
+    }
+    public String getAppId(){
+        return AppId;
+    }
+    public int getAppQuota(){
+        return AppQuota;
+    }
+  }
   static{
     HdfsConfiguration.init();
   }
@@ -343,6 +370,8 @@ public class NameNode implements NameNodeStatusMXBean {
   protected final boolean allowStaleStandbyReads;
   private AtomicBoolean started = new AtomicBoolean(false); 
 
+  //mappingTable
+  private HashMap<String,DfsClientInfo> applicationRegistration;
   
   /** httpServer */
   protected NameNodeHttpServer httpServer;
@@ -893,6 +922,9 @@ public class NameNode implements NameNodeStatusMXBean {
     state = createHAState(getStartupOption(conf));
     this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(conf);
     this.haContext = createHAContext();
+    
+    this.applicationRegistration = new HashMap<String, DfsClientInfo>();
+    
     try {
       initializeGenericKeys(conf, nsId, namenodeId);
       initialize(conf);
@@ -911,6 +943,30 @@ public class NameNode implements NameNodeStatusMXBean {
       throw e;
     }
     this.started.set(true);
+  }
+
+  public synchronized int registerApplication(String userId, String clientName, String appId, int appQuota){
+      DfsClientInfo info = new DfsClientInfo(userId,appId,appQuota);
+      applicationRegistration.put(clientName,info);
+      //for(Map.Entry<String,DfsClientInfo> m : applicationRegistration.entrySet()){
+      //  DfsClientInfo va = m.getValue();
+      //  LOG.info("mappingtable: "+m.getKey()+" "+va.getUserId()+" "+va.getAppId()+" "+va.getAppQuota());
+      //}
+      return 0;
+  }
+  /**
+   * Get Table
+   */
+  public String[] GetApplicationRegistrationTable()
+  {
+      List<String> re=new ArrayList<String>();
+      for(Map.Entry<String,DfsClientInfo>item : applicationRegistration.entrySet()){
+        DfsClientInfo tep=item.getValue();
+        re.add(item.getKey()+","+tep.getUserId()+","+tep.getAppId()+","+tep.getAppQuota());
+      }
+      String[] simplearray=new String[re.size()];
+      re.toArray(simplearray);
+      return simplearray;
   }
 
   private void stopAtException(Exception e){
