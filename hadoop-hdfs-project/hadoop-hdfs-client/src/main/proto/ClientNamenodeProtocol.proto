@@ -54,6 +54,14 @@ message RegisterApplicationResponseProto {
   required uint32 result = 1;
 }
 
+message UnregisterApplicationRequestProto {
+  required string clientName = 1;
+}
+
+message UnregisterApplicationResponseProto {
+  required uint32 result = 1;
+}
+
 message GetBlockLocationsRequestProto {
   required string src = 1;     // file name
   required uint64 offset = 2;  // range start offset
@@ -755,6 +763,8 @@ message GetEditsFromTxidResponseProto {
 service ClientNamenodeProtocol {
   rpc registerApplication(RegisterApplicationRequestProto)
       returns(RegisterApplicationResponseProto);
+  rpc unregisterApplication(UnregisterApplicationRequestProto)
+      returns(UnregisterApplicationResponseProto);
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
   rpc getServerDefaults(GetServerDefaultsRequestProto)

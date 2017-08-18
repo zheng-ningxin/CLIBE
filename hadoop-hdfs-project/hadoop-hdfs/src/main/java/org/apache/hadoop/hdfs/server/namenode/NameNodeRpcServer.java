@@ -670,6 +670,13 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
+  public int unregisterApplication(String clientName) 
+      throws IOException {
+    return nn.unregisterApplication(clientName);
+  }
+  
+
+  @Override // ClientProtocol
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
     checkNNStartup();

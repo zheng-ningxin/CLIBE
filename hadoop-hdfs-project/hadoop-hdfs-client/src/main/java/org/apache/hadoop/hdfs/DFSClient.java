@@ -610,6 +610,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   @Override
   public synchronized void close() throws IOException {
+    namenode.unregisterApplication(clientName);
     if(clientRunning) {
       closeAllFilesBeingWritten(false);
       clientRunning = false;

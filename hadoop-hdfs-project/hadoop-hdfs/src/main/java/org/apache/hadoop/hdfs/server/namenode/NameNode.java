@@ -954,6 +954,7 @@ public class NameNode implements NameNodeStatusMXBean {
       //}
       return 0;
   }
+
   /**
    * Get Table
    */
@@ -963,12 +964,17 @@ public class NameNode implements NameNodeStatusMXBean {
       for(Map.Entry<String,DfsClientInfo>item : applicationRegistration.entrySet()){
         DfsClientInfo tep=item.getValue();
         re.add(item.getKey()+","+tep.getUserId()+","+tep.getAppId()+","+tep.getAppQuota());
-      }
+      	 }
       String[] simplearray=new String[re.size()];
       re.toArray(simplearray);
       return simplearray;
   }
 
+  public synchronized int unregisterApplication(String clientName){
+      applicationRegistration.remove(clientName);
+      return 0;
+  }
+  
   private void stopAtException(Exception e){
     try {
       this.stop();

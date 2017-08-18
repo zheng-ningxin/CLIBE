@@ -95,6 +95,10 @@ public interface ClientProtocol {
   @Idempotent
   int registerApplication(String userId, String clientName, String appId, int appQuota)
     throws IOException;
+
+  @Idempotent
+  int unregisterApplication(String clientName)
+    throws IOException;
   ///////////////////////////////////////
   // File contents
   ///////////////////////////////////////
