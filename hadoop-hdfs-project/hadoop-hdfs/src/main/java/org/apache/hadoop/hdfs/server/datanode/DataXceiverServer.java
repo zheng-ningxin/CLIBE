@@ -34,22 +34,27 @@ import org.apache.hadoop.util.Daemon;
 import com.google.common.annotations.VisibleForTesting;
 
 import org.slf4j.Logger;
-
+//Added for IOBandwidthManager
+import org.apache.hadoop.hdfs.DFSUtil;
+import java.net.InetSocketAddress;
+import java.util.Map;
 /**
  * Server used for receiving/sending a block of data.
- * This is created to listen for requests from clients or 
- * other DataNodes.  This small server does not use the 
+ * This is created to listen for requests from clients or
+ * other DataNodes.  This small server does not use the
  * Hadoop IPC mechanism.
  */
 class DataXceiverServer implements Runnable {
   public static final Logger LOG = DataNode.LOG;
-  
+
   private final PeerServer peerServer;
   private final DataNode datanode;
   private final HashMap<Peer, Thread> peers = new HashMap<Peer, Thread>();
   private final HashMap<Peer, DataXceiver> peersXceiver = new HashMap<Peer, DataXceiver>();
   private boolean closed = false;
-  
+  private IOBandwidthManagerDatanodeSide IOBandwidthManager;
+  private final Configuration conf;
+
   /**
    * Maximal number of concurrent xceivers per node.
    * Enforcing the limit is required in order to avoid data-node
@@ -60,7 +65,7 @@ class DataXceiverServer implements Runnable {
 
   /** A manager to make sure that cluster balancing does not
    * take too much resources.
-   * 
+   *
    * It limits the number of block moves for balancing and
    * the total amount of bandwidth they can use.
    */
@@ -69,8 +74,8 @@ class DataXceiverServer implements Runnable {
    private final AtomicInteger maxThreads = new AtomicInteger(0);
 
    /**Constructor
-    * 
-    * @param bandwidth Total amount of bandwidth can be used for balancing 
+    *
+    * @param bandwidth Total amount of bandwidth can be used for balancing
     */
     private BlockBalanceThrottler(long bandwidth, int maxThreads) {
       super(bandwidth);
@@ -88,9 +93,9 @@ class DataXceiverServer implements Runnable {
       return this.maxThreads.get();
     }
 
-   /** Check if the block move can start. 
-    * 
-    * Return true if the thread quota is not exceeded and 
+   /** Check if the block move can start.
+    *
+    * Return true if the thread quota is not exceeded and
     * the counter is incremented; False otherwise.
     */
     synchronized boolean acquire() {
@@ -108,38 +113,53 @@ class DataXceiverServer implements Runnable {
   }
 
   final BlockBalanceThrottler balanceThrottler;
-  
+
   /**
    * We need an estimate for block size to check if the disk partition has
    * enough space. Newer clients pass the expected block size to the DataNode.
    * For older clients we just use the server-side default block size.
    */
   final long estimateBlockSize;
-  
-  
+
+
   DataXceiverServer(PeerServer peerServer, Configuration conf,
       DataNode datanode) {
     this.peerServer = peerServer;
     this.datanode = datanode;
-    
-    this.maxXceiverCount = 
+
+    this.maxXceiverCount =
       conf.getInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
                   DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT);
-    
+
     this.estimateBlockSize = conf.getLongBytes(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
-    
+
     //set up parameter for cluster balancing
     this.balanceThrottler = new BlockBalanceThrottler(
         conf.getLongBytes(DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY,
             DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_DEFAULT),
         conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
             DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT));
+    this.conf=conf;
+  }
+
+  //Added for start the IOBandwidthManagerDatanodeSide thread
+  private void startIOBandwidthManagerDatanodeSide() {
+    try{
+        Map<String, Map<String, InetSocketAddress> > AddressMap = DFSUtil
+          .getNNServiceRpcAddressesForCluster(conf);
+        IOBandwidthManager=new IOBandwidthManagerDatanodeSide(datanode,this,AddressMap);
+        Thread BandwidthManagerThread=new Thread(IOBandwidthManager);   
+        BandwidthManagerThread.start();
+    }catch(Exception ex){
+        LOG.warn("In DataXceiverServer.startIOBandwidthManagerDatanodeSide :"+ex);
+    }
   }
 
   @Override
   public void run() {
     Peer peer = null;
+    startIOBandwidthManagerDatanodeSide();
     while (datanode.shouldRun && !datanode.shutdownForUpgrade) {
       try {
         peer = peerServer.accept();
@@ -224,7 +244,7 @@ class DataXceiverServer implements Runnable {
       LOG.warn(datanode.getDisplayName() + ":DataXceiverServer.kill(): ", ie);
     }
   }
-  
+
   synchronized void addPeer(Peer peer, Thread t, DataXceiver xceiver)
       throws IOException {
     if (closed) {
@@ -262,7 +282,7 @@ class DataXceiverServer implements Runnable {
       peersXceiver.get(p).stopWriter();
     }
   }
-  
+
   // Notify all peers of the shutdown and restart.
   // datanode.shouldRun should still be true and datanode.restarting should
   // be set true before calling this method.

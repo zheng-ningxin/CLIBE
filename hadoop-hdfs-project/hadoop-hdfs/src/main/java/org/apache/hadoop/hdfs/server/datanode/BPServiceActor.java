@@ -86,13 +86,13 @@ import com.google.common.base.Joiner;
  */
 @InterfaceAudience.Private
 class BPServiceActor implements Runnable {
-  
+
   static final Logger LOG = DataNode.LOG;
   final InetSocketAddress nnAddr;
   HAServiceState state;
 
   final BPOfferService bpos;
-  
+
   volatile long lastCacheReport = 0;
   private final Scheduler scheduler;
 
@@ -112,7 +112,7 @@ class BPServiceActor implements Runnable {
   private final IncrementalBlockReportManager ibrManager;
 
   private DatanodeRegistration bpRegistration;
-  final LinkedList<BPServiceActorAction> bpThreadQueue 
+  final LinkedList<BPServiceActorAction> bpThreadQueue
       = new LinkedList<BPServiceActorAction>();
 
   BPServiceActor(InetSocketAddress nnAddr, InetSocketAddress lifelineNnAddr,
@@ -155,7 +155,7 @@ class BPServiceActor implements Runnable {
   public String toString() {
     return bpos.toString() + " service to " + nnAddr;
   }
-  
+
   InetSocketAddress getNNSocketAddress() {
     return nnAddr;
   }
@@ -211,7 +211,7 @@ class BPServiceActor implements Runnable {
    * This calls <code>versionRequest</code> to determine the NN's
    * namespace and version info. It automatically retries until
    * the NN responds or the DN is shutting down.
-   * 
+   *
    * @return the NamespaceInfo
    */
   @VisibleForTesting
@@ -227,11 +227,11 @@ class BPServiceActor implements Runnable {
       } catch(IOException e ) {  // namenode is not available
         LOG.warn("Problem connecting to server: " + nnAddr);
       }
-      
+
       // try again in a second
       sleepAndLogInterrupts(5000, "requesting version info from NN");
     }
-    
+
     if (nsInfo != null) {
       checkNNVersion(nsInfo);
     } else {
@@ -271,7 +271,7 @@ class BPServiceActor implements Runnable {
     // This also initializes our block pool in the DN if we are
     // the first NN connection for this BP.
     bpos.verifyAndSetNamespaceInfo(this, nsInfo);
-    
+
     // Second phase of the handshake with the NN.
     register(nsInfo);
   }
@@ -296,7 +296,7 @@ class BPServiceActor implements Runnable {
       }
     }
   }
-  
+
   @VisibleForTesting
   void triggerHeartbeatForTests() {
     synchronized (ibrManager) {
@@ -444,12 +444,12 @@ class BPServiceActor implements Runnable {
     }
     return cmd;
   }
-  
+
   HeartbeatResponse sendHeartBeat(boolean requestBlockReportLease)
       throws IOException {
     //*******************************************************************************
     //test for application registration table from namenode
-    run_fetchAppRegisterTable();
+    //run_fetchAppRegisterTable();     //VisibleForTesting
     //*******************************************************************************
     scheduler.scheduleNextHeartbeat();
     StorageReport[] reports =
@@ -458,7 +458,7 @@ class BPServiceActor implements Runnable {
       LOG.debug("Sending heartbeat with " + reports.length +
                 " storage reports from service actor: " + this);
     }
-    
+
     scheduler.updateLastHeartbeatTime(monotonicNow());
     VolumeFailureSummary volumeFailureSummary = dn.getFSDataset()
         .getVolumeFailureSummary();
@@ -476,8 +476,9 @@ class BPServiceActor implements Runnable {
   }
 
   /**
-   * Added for the application registration table from Namenode 
+   * Added for the application registration table from Namenode
    */
+  @VisibleForTesting
   void run_fetchAppRegisterTable()throws IOException{
     AppRegisterTable t= bpNamenode.fetchAppRegisterTable(bpRegistration,"");
     String [] tt=t.getTable();
@@ -488,9 +489,9 @@ class BPServiceActor implements Runnable {
         DataOutputStream out= new DataOutputStream(socket.getOutputStream());
         String tablesize=Integer.toString(tt.length);
         out.writeUTF(tablesize+"\n");
+        out.writeUTF(this.toString());   //VisibleForTesting
         for(int i=0;i<tt.length;i++){
-            //out.println(tt[i]);out.flush();
-            out.writeUTF(tt[i]+"\n");
+            //out.writeUTF(tt[i]+"\n");  //VisibleForTesting
         }
         out.writeUTF("!!!!!!!!!!!!!!!!!!!!!\n\n");
         out.close();
@@ -527,14 +528,14 @@ class BPServiceActor implements Runnable {
       lifelineSender.start();
     }
   }
-  
+
   private String formatThreadName(String action, InetSocketAddress addr) {
     Collection<StorageLocation> dataDirs =
         DataNode.getStorageLocations(dn.getConf());
     return "DataNode: [" + dataDirs.toString() + "]  " +
         action + " to " + addr;
   }
-  
+
   //This must be called only by blockPoolManager.
   void stop() {
     shouldServiceRun = false;
@@ -545,7 +546,7 @@ class BPServiceActor implements Runnable {
       bpThread.interrupt();
     }
   }
-  
+
   //This must be called only by blockPoolManager
   void join() {
     try {
@@ -557,10 +558,10 @@ class BPServiceActor implements Runnable {
       }
     } catch (InterruptedException ie) { }
   }
-  
+
   //Cleanup method to be called by current thread before exiting.
   private synchronized void cleanUp() {
-    
+
     shouldServiceRun = false;
     IOUtils.cleanup(null, bpNamenode);
     IOUtils.cleanup(null, lifelineSender);
@@ -685,7 +686,7 @@ class BPServiceActor implements Runnable {
               scheduler.monotonicNow() - startTime);
         }
 
-        // There is no work to do;  sleep until hearbeat timer elapses, 
+        // There is no work to do;  sleep until hearbeat timer elapses,
         // or work arrives, and then iterate again.
         ibrManager.waitTillNextIBR(scheduler.getHeartbeatWaitTime());
       } catch(RemoteException re) {
@@ -720,11 +721,11 @@ class BPServiceActor implements Runnable {
    * Register one bp with the corresponding NameNode
    * <p>
    * The bpDatanode needs to register with the namenode on startup in order
-   * 1) to report which storage it is serving now and 
+   * 1) to report which storage it is serving now and
    * 2) to receive a registrationID
-   *  
+   *
    * issued by the namenode to recognize registered datanodes.
-   * 
+   *
    * @param nsInfo current NamespaceInfo
    * @see FSNamesystem#registerDatanode(DatanodeRegistration)
    * @throws IOException
@@ -752,7 +753,7 @@ class BPServiceActor implements Runnable {
         sleepAndLogInterrupts(1000, "connecting to server");
       }
     }
-    
+
     LOG.info("Block pool " + this + " successfully registered with NN");
     bpos.registrationSucceeded(this, bpRegistration);
 
@@ -838,9 +839,9 @@ class BPServiceActor implements Runnable {
 
   /**
    * Process an array of datanode commands
-   * 
+   *
    * @param cmds an array of datanode commands
-   * @return true if further processing may be required or false otherwise. 
+   * @return true if further processing may be required or false otherwise.
    */
   boolean processCommand(DatanodeCommand[] cmds) {
     if (cmds != null) {
@@ -863,7 +864,7 @@ class BPServiceActor implements Runnable {
    */
   void reportRemoteBadBlock(DatanodeInfo dnInfo, ExtendedBlock block)
       throws IOException {
-    LocatedBlock lb = new LocatedBlock(block, 
+    LocatedBlock lb = new LocatedBlock(block,
                                     new DatanodeInfo[] {dnInfo});
     bpNamenode.reportBadBlocks(new LocatedBlock[] {lb});
   }
@@ -896,7 +897,7 @@ class BPServiceActor implements Runnable {
       }
     }
   }
-  
+
   public void bpThreadEnqueue(BPServiceActorAction action) {
     synchronized (bpThreadQueue) {
       if (!bpThreadQueue.contains(action)) {

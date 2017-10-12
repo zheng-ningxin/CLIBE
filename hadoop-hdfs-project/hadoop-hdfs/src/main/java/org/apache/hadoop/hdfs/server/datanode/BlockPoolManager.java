@@ -158,13 +158,19 @@ class BlockPoolManager {
       doRefreshNamenodes(newAddressMap, newLifelineAddressMap);
     }
   }
-  
+  //VisibleForTesting  
+  private void LogForTesting(String content){
+    LOG.info("********************************Testing for Ning*********************************");
+    LOG.info(content);
+    LOG.info("********************************Testing for Ning*********************************");
+  }
+
   private void doRefreshNamenodes(
       Map<String, Map<String, InetSocketAddress>> addrMap,
       Map<String, Map<String, InetSocketAddress>> lifelineAddrMap)
       throws IOException {
     assert Thread.holdsLock(refreshNamenodesLock);
-
+    LogForTesting("The number of nameservices : "+String.valueOf(addrMap.size()));
     Set<String> toRefresh = Sets.newLinkedHashSet();
     Set<String> toAdd = Sets.newLinkedHashSet();
     Set<String> toRemove;

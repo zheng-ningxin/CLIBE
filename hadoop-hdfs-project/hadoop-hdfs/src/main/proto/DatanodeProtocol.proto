@@ -378,7 +378,25 @@ message AppRegisterTableProto{
   repeated string table = 1;
 }
 
-
+/**
+ * Get the IOBandwidth Quota for Dfsclient from the Namenode
+ */
+message IOBandwidthQuotaRequestProto{
+  repeated string clientname=1; 
+}
+/**
+ * IOBandwidth Quota message struct  for clientname 
+ */
+message IOBandwidthQuota{
+  required string clientname=1;
+  required uint64 iobandwidth=2;
+}
+/**
+ * response to the IOBandwidth Quota request
+ */ 
+message IOBandwidthQuotaResponseProto{
+  repeated IOBandwidthQuota quotalist=1;      
+}
 /**
  * void response
  */
@@ -395,6 +413,13 @@ service DatanodeProtocolService {
    */
   rpc fetchAppRegisterTable(AppRegisterTableRequestProto)
       returns(AppRegisterTableProto);
+  /**
+   *Fetch the IOBandwidth allocation from the Namenode
+   */
+  /*
+  rpc fetchIOBandwidthQuotaList(IOBandwidthQuotaRequestProto)
+      returns(IOBandwidthQuotaResponseProto);
+  */
   /**
    * Register a datanode at a namenode
    */

@@ -100,6 +100,13 @@ class BPOfferService {
       new ReentrantReadWriteLock();
   private final Lock mReadLock  = mReadWriteLock.readLock();
   private final Lock mWriteLock = mReadWriteLock.writeLock();
+  
+  @VisibleForTesting
+  void LogForTesting(String content){
+    LOG.info("***********************Testing for Ning*************************************\n"); 
+    LOG.info(content);
+    LOG.info("***********************Testing for Ning*************************************\n"); 
+  }
 
   // utility methods to acquire and release read lock and write lock
   void readLock() {
@@ -125,8 +132,9 @@ class BPOfferService {
     Preconditions.checkArgument(nnAddrs.size() == lifelineNnAddrs.size(),
         "Must pass same number of NN addresses and lifeline addresses.");
     this.dn = dn;
-
+    LogForTesting("The number of Namenode:  "+String.valueOf(nnAddrs.size()));          //VisibleForTesting
     for (int i = 0; i < nnAddrs.size(); ++i) {
+      LogForTesting(nnAddrs.get(i).toString());                                         //VisibleForTesting
       this.bpServices.add(new BPServiceActor(nnAddrs.get(i),
           lifelineNnAddrs.get(i), this));
     }
