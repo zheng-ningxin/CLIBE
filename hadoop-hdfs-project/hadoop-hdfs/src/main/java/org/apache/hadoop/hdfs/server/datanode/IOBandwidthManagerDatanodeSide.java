@@ -141,18 +141,17 @@ class IOBandwidthManagerDatanodeSide implements Runnable {
             LOG.warn(datanode.getDisplayName()+
                 ":IOBandwidthManagerDatanodeSide:Runing exception",exception);
         }
-
-        // Close the IOBandwidthManagerDatanodeSide
-        try {
-            showtimestable.clear();
-            bandwidthtable.clear();
+    }
+    // Close the IOBandwidthManagerDatanodeSide
+    try {
+        showtimestable.clear();
+        bandwidthtable.clear();
         closed = true;
-        } catch (Exception ie) {
+    } catch (Exception ie) {
             LOG.warn(datanode.getDisplayName()
             + " :DataXceiverServer: close exception", ie);
-        }
-
     }
+
   }
   private void updateAllThrottler()
   {

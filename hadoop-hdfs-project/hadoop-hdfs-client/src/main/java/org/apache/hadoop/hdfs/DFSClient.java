@@ -804,7 +804,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
 
   }
-
+  
+  public void unregisterStream(String stream) throws IOException{
+    namenode.unregisterStream(stream);
+  }
+  
   /**
    * Report corrupt blocks that were discovered by the client.
    * @see ClientProtocol#reportBadBlocks(LocatedBlock[])
@@ -1126,7 +1130,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     checkOpen();
     //    Get block info from namenode
     try (TraceScope ignored = newPathTraceScope("newDFSInputStream", src)) {
-      return new DFSInputStream(this, src, verifyChecksum, null);
+      DFSInputStream stream = new DFSInputStream(this, src, verifyChecksum, null);
+      namenode.registerStream(stream.toString(),clientName);
+      return stream;
     }
   }
 
@@ -1273,6 +1279,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         dfsClientConf.createChecksum(checksumOpt),
         getFavoredNodesStr(favoredNodes));
     beginFileLease(result.getFileId(), result);
+    namenode.registerStream(result.toString(),clientName);
     return result;
   }
 
@@ -1471,6 +1478,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     final DFSOutputStream result = callAppend(src, flag, progress,
         favoredNodes);
     beginFileLease(result.getFileId(), result);
+    namenode.registerStream(result.toString(), clientName);
     return result;
   }
 

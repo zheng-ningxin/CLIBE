@@ -768,6 +768,7 @@ public class DFSOutputStream extends FSOutputSummer
       try (TraceScope ignored = dfsClient.newPathTraceScope(
           "DFSOutputStream#close", src)) {
         closeImpl();
+        dfsClient.unregisterStream(this.toString());
       } catch (IOException e) {
         b.add(e);
       }

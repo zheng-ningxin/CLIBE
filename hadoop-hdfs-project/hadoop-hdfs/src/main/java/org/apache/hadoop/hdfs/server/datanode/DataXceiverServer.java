@@ -159,7 +159,7 @@ class DataXceiverServer implements Runnable {
   @Override
   public void run() {
     Peer peer = null;
-    startIOBandwidthManagerDatanodeSide();
+    //startIOBandwidthManagerDatanodeSide();
     while (datanode.shouldRun && !datanode.shutdownForUpgrade) {
       try {
         peer = peerServer.accept();

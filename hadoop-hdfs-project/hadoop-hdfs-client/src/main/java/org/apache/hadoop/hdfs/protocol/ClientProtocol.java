@@ -99,6 +99,18 @@ public interface ClientProtocol {
   @Idempotent
   int unregisterApplication(String clientName)
     throws IOException;
+
+  @Idempotent
+  int registerStream(String stream, String clientName)
+    throws IOException;
+
+  @Idempotent
+  int unregisterStream(String stream)
+    throws IOException;
+  
+  @Idempotent
+  int registerNodes(String clientName, DatanodeInfo[] nodes)
+    throws IOException;
   ///////////////////////////////////////
   // File contents
   ///////////////////////////////////////

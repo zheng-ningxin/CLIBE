@@ -716,7 +716,7 @@ public class DFSInputStream extends FSInputStream
       return;
     }
     dfsClient.checkOpen();
-
+    dfsClient.unregisterStream(this.toString());
     if ((extendedReadBuffers != null) && (!extendedReadBuffers.isEmpty())) {
       final StringBuilder builder = new StringBuilder();
       extendedReadBuffers.visitAll(new IdentityHashStore.Visitor<ByteBuffer, Object>() {
@@ -1007,6 +1007,8 @@ public class DFSInputStream extends FSInputStream
     while (true) {
       DNAddrPair result = getBestNodeDNAddrPair(block, ignoredNodes);
       if (result != null) {
+        DatanodeInfo[] registernode = {result.info};
+        dfsClient.namenode.registerNodes(dfsClient.clientName,registernode);
         return result;
       } else {
         String errMsg = getBestNodeDNAddrPairErrorString(block.getLocations(),

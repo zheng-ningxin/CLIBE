@@ -373,6 +373,12 @@ public class NameNode implements NameNodeStatusMXBean {
   //mappingTable
   private HashMap<String,DfsClientInfo> applicationRegistration;
   
+  //streamMap
+  private HashMap<String, String> streamMap;
+  
+  //nodesMap
+  private HashMap<String, List<String>> nodesMap;
+
   /** httpServer */
   protected NameNodeHttpServer httpServer;
   private Thread emptier;
@@ -924,6 +930,8 @@ public class NameNode implements NameNodeStatusMXBean {
     this.haContext = createHAContext();
     
     this.applicationRegistration = new HashMap<String, DfsClientInfo>();
+    this.streamMap = new HashMap<String, String>();
+    this.nodesMap = new HashMap<String, List<String>>();
     
     try {
       initializeGenericKeys(conf, nsId, namenodeId);
@@ -972,6 +980,39 @@ public class NameNode implements NameNodeStatusMXBean {
 
   public synchronized int unregisterApplication(String clientName){
       applicationRegistration.remove(clientName);
+      nodesMap.remove(clientName);
+      return 0;
+  }
+
+  public synchronized int registerStream(String stream, String clientName){
+      streamMap.put(stream, clientName);
+      // LOG.info("***********");
+      // for(Map.Entry<String,String> m : streamMap.entrySet()){
+      //   LOG.info("streamMap: "+m.getKey()+" "+m.getValue());
+      // }
+      return 0;
+  }
+  
+  public synchronized int unregisterStream(String stream){
+      streamMap.remove(stream);
+      // LOG.info("***********");
+      // for(Map.Entry<String,String> m : streamMap.entrySet()){
+      //   LOG.info("streamMap: "+m.getKey()+" "+m.getValue());
+      // }
+      return 0;
+  }
+
+  public synchronized int registerNodes(String clientName, List<String> nodes){
+      nodesMap.put(clientName,nodes);
+       LOG.info("***********");
+       for(Map.Entry<String,List<String>> m : nodesMap.entrySet()){
+         LOG.info("nodesMap: "+m.getKey());
+         List<String> nodelist = m.getValue();
+         for(String n:nodelist){
+             LOG.info(n);
+         }
+       }
+       LOG.info("***********");
       return 0;
   }
   

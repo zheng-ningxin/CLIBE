@@ -156,6 +156,10 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Refres
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshNodesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RegisterApplicationRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RegisterApplicationResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RegisterNodesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RegisterNodesResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RegisterStreamRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RegisterStreamResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCacheDirectiveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCacheDirectiveResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCachePoolRequestProto;
@@ -204,6 +208,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Update
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UnregisterApplicationRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UnregisterApplicationResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UnregisterStreamRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UnregisterStreamResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.CreateEncryptionZoneResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.CreateEncryptionZoneRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathResponseProto;
@@ -398,6 +404,44 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     }
   }
   
+  @Override
+  public RegisterStreamResponseProto registerStream(
+      RpcController controller, RegisterStreamRequestProto req)
+      throws ServiceException{
+    try {
+      int result = server.registerStream(req.getStream(), req.getClientName());
+      return RegisterStreamResponseProto.newBuilder().setResult(result).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+  
+  @Override
+  public UnregisterStreamResponseProto unregisterStream(
+      RpcController controller, UnregisterStreamRequestProto req)
+      throws ServiceException{
+    try {
+      int result = server.unregisterStream(req.getStream());
+      return UnregisterStreamResponseProto.newBuilder().setResult(result).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+  
+  @Override
+  public RegisterNodesResponseProto registerNodes(
+      RpcController controller, RegisterNodesRequestProto req)
+      throws ServiceException{
+    try {
+      List<DatanodeInfoProto> nodes = req.getNodesList();
+      int result = server.registerNodes(req.getClientName(), 
+          PBHelperClient.convert(nodes.toArray(new DatanodeInfoProto[nodes.size()])));
+      return RegisterNodesResponseProto.newBuilder().setResult(result).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+ 
   @Override
   public GetBlockLocationsResponseProto getBlockLocations(
       RpcController controller, GetBlockLocationsRequestProto req)

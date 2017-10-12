@@ -550,21 +550,23 @@ class DataStreamer extends Daemon {
     }
   }
 
-  private void setPipeline(LocatedBlock lb) {
+  private void setPipeline(LocatedBlock lb) throws IOException{
     setPipeline(lb.getLocations(), lb.getStorageTypes(), lb.getStorageIDs());
   }
 
   private void setPipeline(DatanodeInfo[] nodes, StorageType[] storageTypes,
-                           String[] storageIDs) {
+                           String[] storageIDs) throws IOException{
     this.nodes = nodes;
     this.storageTypes = storageTypes;
     this.storageIDs = storageIDs;
+    if(nodes!=null)
+        dfsClient.namenode.registerNodes(dfsClient.clientName,nodes);
   }
 
   /**
    * Initialize for data streaming
    */
-  private void initDataStreaming() {
+  private void initDataStreaming() throws IOException{
     this.setName("DataStreamer for file " + src +
         " block " + block);
     response = new ResponseProcessor(nodes);
@@ -572,7 +574,7 @@ class DataStreamer extends Daemon {
     stage = BlockConstructionStage.DATA_STREAMING;
   }
 
-  private void endBlock() {
+  private void endBlock() throws IOException{
     LOG.debug("Closing old block {}", block);
     this.setName("DataStreamer for file " + src);
     closeResponder();
@@ -1433,7 +1435,7 @@ class DataStreamer extends Daemon {
    * Remove bad node from list of nodes if badNodeIndex was set.
    * @return true if it should continue.
    */
-  private boolean handleBadDatanode() {
+  private boolean handleBadDatanode() throws IOException{
     final int badNodeIndex = errorState.getBadNodeIndex();
     if (badNodeIndex >= 0) {
       if (nodes.length <= 1) {

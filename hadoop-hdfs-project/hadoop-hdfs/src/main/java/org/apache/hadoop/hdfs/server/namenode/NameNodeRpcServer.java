@@ -34,6 +34,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -673,6 +674,28 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public int unregisterApplication(String clientName) 
       throws IOException {
     return nn.unregisterApplication(clientName);
+  }
+  
+  @Override // ClientProtocol
+  public int registerStream(String stream, String clientName) 
+      throws IOException {
+    return nn.registerStream(stream, clientName);
+  }
+  
+  @Override // ClientProtocol
+  public int unregisterStream(String stream) 
+      throws IOException {
+    return nn.unregisterStream(stream);
+  }
+
+  @Override // ClientProtocol
+  public int registerNodes(String clientName, DatanodeInfo[] nodes) 
+      throws IOException {
+    List<String> nodelist = new ArrayList<String>();
+    for(int i=0;i<nodes.length;++i){
+        nodelist.add(nodes[i].getDatanodeUuid());
+    }
+    return nn.registerNodes(clientName,nodelist);
   }
   
 
@@ -1432,7 +1455,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       }
       return reTable;
   }
-
   @Override // DatanodeProtocol
   public DatanodeCommand blockReport(final DatanodeRegistration nodeReg,
         String poolId, final StorageBlockReport[] reports,
