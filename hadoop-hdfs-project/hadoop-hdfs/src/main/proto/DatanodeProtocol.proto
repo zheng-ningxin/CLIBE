@@ -370,7 +370,7 @@ message CommitBlockSynchronizationRequestProto {
  * Get Application register table from Namenode
  */
 message AppRegisterTableRequestProto{
-  required DatanodeRegistrationProto registration = 1; // Datanode info
+  optional DatanodeRegistrationProto registration = 1; // Datanode info
   optional string request = 2;
 }
 
@@ -415,11 +415,13 @@ service DatanodeProtocolService {
       returns(AppRegisterTableProto);
   /**
    *Fetch the IOBandwidth allocation from the Namenode
+   * Dfsclient level IOBandwidth allocation,Input String:Clientname
    */
-  /*
+  /*rpc fetchIOBandwidthQuota(IOBandwidthQuotaRequestProto)
+      returns(IOBandwidthQuotaResponseProto);
+  */  
   rpc fetchIOBandwidthQuotaList(IOBandwidthQuotaRequestProto)
       returns(IOBandwidthQuotaResponseProto);
-  */
   /**
    * Register a datanode at a namenode
    */

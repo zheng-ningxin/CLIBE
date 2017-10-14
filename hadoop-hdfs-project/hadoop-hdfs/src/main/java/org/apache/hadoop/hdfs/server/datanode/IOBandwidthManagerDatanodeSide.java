@@ -32,6 +32,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import com.google.common.annotations.VisibleForTesting;
 //*************************************
+import org.apache.hadoop.hdfs.server.protocol.AppRegisterTable;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import static  org.apache.hadoop.util.Time.monotonicNow;
 import java.util.*;
@@ -107,11 +108,29 @@ class IOBandwidthManagerDatanodeSide implements Runnable {
         }
     }
   }
-
+ 
   private void  connectToNN() throws IOException{
     if(nnAddr==null)
         throw new IOException("There is no Namenode for IOBandwidthManagerDatanodeSide to communicate with");
     bpNamenode = datanode.connectToNN(nnAddr);
+    if(bpNamenode==null)
+        throw new IOException("IOBandwidthManagerDatanodeSide: bpNamenode == null");
+  }
+  //Test function 
+  private void testForRPC(){
+    try{
+      AppRegisterTable tmp= bpNamenode.fetchAppRegisterTable("");
+      String[] tt=tmp.getTable();
+      LOG.info("***********************************Test  RPC Mechanism**************************\n"); 
+      LOG.info("The Number of Application :"+String.valueOf(tt.length));
+      for(String cur: tt){
+        
+        LOG.info(cur+"\n");
+      }
+      LOG.info("***********************************End   RPC Mechanism**************************\n\n\n");
+    }catch (IOException ie){
+        LOG.warn("testForRPC in IOBandwidthManagerDatanodeSide:"+ie);
+    } 
   }
   @Override
   public synchronized void run() {
@@ -123,7 +142,8 @@ class IOBandwidthManagerDatanodeSide implements Runnable {
     }
     while (datanode.shouldRun && !datanode.shutdownForUpgrade && !this.closed) {
         try {
-            LOG.info("Test for IOBandwidthManagerDatanodeSide if alive!\n");
+            //LOG.info("Test for IOBandwidthManagerDatanodeSide if alive!\n");
+            //testForRPC();
             long cur=monotonicNow();
             SendToLocalhost(String.valueOf(cur));
             if(updaterequired==true){

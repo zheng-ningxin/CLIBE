@@ -449,7 +449,7 @@ class BPServiceActor implements Runnable {
       throws IOException {
     //*******************************************************************************
     //test for application registration table from namenode
-    //run_fetchAppRegisterTable();     //VisibleForTesting
+    //run_fetchAppRegisterTable();      //VisibleForTesting
     //*******************************************************************************
     scheduler.scheduleNextHeartbeat();
     StorageReport[] reports =
@@ -480,7 +480,7 @@ class BPServiceActor implements Runnable {
    */
   @VisibleForTesting
   void run_fetchAppRegisterTable()throws IOException{
-    AppRegisterTable t= bpNamenode.fetchAppRegisterTable(bpRegistration,"");
+    AppRegisterTable t= bpNamenode.fetchAppRegisterTable("");
     String [] tt=t.getTable();
     Socket socket=null;
     try{

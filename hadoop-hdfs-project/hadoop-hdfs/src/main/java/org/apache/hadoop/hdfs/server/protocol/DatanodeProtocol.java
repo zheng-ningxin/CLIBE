@@ -124,8 +124,14 @@ public interface DatanodeProtocol {
    * applicationid,userid,application 
    */
   @Idempotent
-  public AppRegisterTable fetchAppRegisterTable(DatanodeRegistration registration,
+  public AppRegisterTable fetchAppRegisterTable(//DatanodeRegistration registration,
                                                    String request) throws IOException;
+
+  /**
+   * FetchIOBandwidthQuota() From the Namenode 
+   */
+  @Idempotent
+  public long[] ComputeQuota(List<String> dfsclients) throws IOException;
 
   /**
    * blockReport() tells the NameNode about all the locally-stored blocks.

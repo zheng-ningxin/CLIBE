@@ -48,6 +48,9 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageBlock
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReceivedDeletedBlocksProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableProto;          //added for application registration table
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableRequestProto;   //added for application registration table 
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.IOBandwidthQuota;   //added for IOBandwidth
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.IOBandwidthQuotaRequestProto;   //added for IOBandwidth
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.IOBandwidthQuotaResponseProto;   //added for IOBandwidth
 
 
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionRequestProto;
@@ -134,18 +137,39 @@ public class DatanodeProtocolClientSideTranslatorPB implements
   }
 
   @Override
-  public AppRegisterTable fetchAppRegisterTable(DatanodeRegistration registration,
+  public AppRegisterTable fetchAppRegisterTable(//DatanodeRegistration registration,
           String request) throws IOException{
     AppRegisterTableRequestProto.Builder builder = AppRegisterTableRequestProto
-        .newBuilder().setRegistration(PBHelper.convert(registration))
+        .newBuilder()//.setRegistration(PBHelper.convert(registration))
         .setRequest(request);
     AppRegisterTableProto resp;
     try{
-      resp = rpcProxy.fetchAppRegisterTable(NULL_CONTROLLER, builder.build());  
+        resp = rpcProxy.fetchAppRegisterTable(NULL_CONTROLLER, builder.build());  
     }catch (ServiceException se)  {
         throw ProtobufHelper.getRemoteException(se);
     }
     return PBHelper.convert(resp);
+  }
+  @Override
+  public long[] ComputeQuota(List<String> dfsclients) throws IOException{
+    IOBandwidthQuotaRequestProto.Builder builder = IOBandwidthQuotaRequestProto
+        .newBuilder();
+    for(String clientname : dfsclients){
+        builder.addClientname(clientname);
+    }
+    IOBandwidthQuotaResponseProto resp;
+    try{
+        resp= rpcProxy.fetchIOBandwidthQuotaList(NULL_CONTROLLER, builder.build());
+    } catch(ServiceException se)  {
+        throw ProtobufHelper.getRemoteException(se);
+    }
+    List<IOBandwidthQuota>quotalist=resp.getQuotalistList();
+    long[] re=new long[quotalist.size()];
+    int pos=0;
+    for(IOBandwidthQuota cur: quotalist){
+        re[pos++]=cur.getIobandwidth();
+    }
+    return re;
   }
 
   @Override

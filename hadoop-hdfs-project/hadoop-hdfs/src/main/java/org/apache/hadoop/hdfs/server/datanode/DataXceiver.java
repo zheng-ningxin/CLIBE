@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs.server.datanode;
-
+ 
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR;
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR_ACCESS_TOKEN;
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR_INVALID;
@@ -87,6 +87,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StopWatch;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
@@ -562,7 +563,19 @@ class DataXceiver extends Receiver implements Runnable {
     DataOutputStream out = getBufferedOutputStream();
     checkAccess(out, true, block, blockToken,
         Op.READ_BLOCK, BlockTokenIdentifier.AccessMode.READ);
-  
+    LOG.info("Check Point 1\n");
+
+    //Get the IOBandwidth Quota 
+    long IOQuota = dataXceiverServer.getIOBandwidthQuotaUsingDfsclient(clientName);
+    if(IOQuota <0){
+        LOG.warn("IOBandwidth Quota allocated is lower than zero!!\n");
+    }
+    DataTransferThrottler IOthrottler=null;
+    if(IOQuota>0){
+        IOthrottler = new DataTransferThrottler(IOQuota);
+    }
+    LOG.info("************************************test info************************************\n");
+    LOG.info("DfsClient: "+clientName+"   IOBandwidth: "+String.valueOf(IOQuota)+"\n");
     // send the block
     BlockSender blockSender = null;
     DatanodeRegistration dnR = 
@@ -591,7 +604,8 @@ class DataXceiver extends Receiver implements Runnable {
       writeSuccessWithChecksumInfo(blockSender, new DataOutputStream(getOutputStream()));
 
       long beginRead = Time.monotonicNow();
-      read = blockSender.sendBlock(out, baseStream, null); // send data
+      //read = blockSender.sendBlock(out, baseStream, null); // send data
+      read = blockSender.sendBlock(out, baseStream, IOthrottler); // send data
       long duration = Time.monotonicNow() - beginRead;
       if (blockSender.didSendEntireByteRange()) {
         // If we sent the entire range, then we should expect the client

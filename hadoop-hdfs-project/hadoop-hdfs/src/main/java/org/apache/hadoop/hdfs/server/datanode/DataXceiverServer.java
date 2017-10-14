@@ -35,9 +35,13 @@ import com.google.common.annotations.VisibleForTesting;
 
 import org.slf4j.Logger;
 //Added for IOBandwidthManager
+import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.DFSUtil;
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+
 /**
  * Server used for receiving/sending a block of data.
  * This is created to listen for requests from clients or
@@ -54,6 +58,8 @@ class DataXceiverServer implements Runnable {
   private boolean closed = false;
   private IOBandwidthManagerDatanodeSide IOBandwidthManager;
   private final Configuration conf;
+  private DatanodeProtocolClientSideTranslatorPB bpNamenode=null;
+
 
   /**
    * Maximal number of concurrent xceivers per node.
@@ -143,7 +149,8 @@ class DataXceiverServer implements Runnable {
     this.conf=conf;
   }
 
-  //Added for start the IOBandwidthManagerDatanodeSide thread
+  //PLAN B:Added for start the IOBandwidthManagerDatanodeSide thread
+  
   private void startIOBandwidthManagerDatanodeSide() {
     try{
         Map<String, Map<String, InetSocketAddress> > AddressMap = DFSUtil
@@ -155,15 +162,65 @@ class DataXceiverServer implements Runnable {
         LOG.warn("In DataXceiverServer.startIOBandwidthManagerDatanodeSide :"+ex);
     }
   }
+  public long getIOBandwidthQuotaUsingDfsclient(String clientname){
+    List<String> clientslist= new ArrayList<String>();
+    clientslist.add(clientname);
+    long[] quota=null;
+    try{
+        quota=bpNamenode.ComputeQuota(clientslist);
+    } catch(IOException ie){
+        LOG.warn("In getIOBandwidthQuotaUsingDfsclient of DataXceiverServer.java:"+ie);
+    }
+    if(quota!=null)
+        return quota[0];
+    else
+        return -1;
+    
+    
+  }
+  //PLAN A:Simple version, inplements the rpc mechanism in DataXceiverServer 
+  //to test if bpnamenode works
+  private void GetRpcHandlerForIOControl(){
+    InetSocketAddress nnAddr;
+    try{
+        Map<String,Map<String, InetSocketAddress> >  AddressMap =DFSUtil
+          .getNNServiceRpcAddressesForCluster(conf);
+        if(AddressMap.isEmpty()){
+            nnAddr=null;
+            throw new IOException("DataXceiverServer Get RpcController AddressMap is empty");
+        }
+        //Keep For Multiple NameServices
+        List<InetSocketAddress> nnList=new ArrayList<InetSocketAddress>();
+        for(String nameServiceID : AddressMap.keySet()){
+            Map<String,InetSocketAddress> nnIDToAddr =AddressMap.get(nameServiceID);
+            for(String nnID: nnIDToAddr.keySet()){
+                nnList.add(nnIDToAddr.get(nnID));
+            }
+        }
+        //Here only consider the situation that only has one nameservice
+        //More complex situation to be solved
+        nnAddr=nnList.get(0);
+        if(nnAddr!=null){
+            bpNamenode=datanode.connectToNN(nnAddr);
+        }
+        if(bpNamenode==null){
+            LOG.warn("RPC Handler in DataXceiverServer is null");
+            throw new IOException("RPC Handler in DataXceiverServer is null");
+            
+        }
+    }catch (Exception ex){
+        LOG.warn("DataXceiverServer: Exception in GetRpcHandlerForIOControl "+ex);
+    }
+  }
 
   @Override
   public void run() {
     Peer peer = null;
     //startIOBandwidthManagerDatanodeSide();
+    GetRpcHandlerForIOControl();
     while (datanode.shouldRun && !datanode.shutdownForUpgrade) {
       try {
         peer = peerServer.accept();
-
         // Make sure the xceiver count is not exceeded
         int curXceiverCount = datanode.getXceiverCount();
         if (curXceiverCount > maxXceiverCount) {
@@ -171,7 +228,6 @@ class DataXceiverServer implements Runnable {
               + " exceeds the limit of concurrent xcievers: "
               + maxXceiverCount);
         }
-
         new Daemon(datanode.threadGroup,
             DataXceiver.create(peer, datanode, this))
             .start();

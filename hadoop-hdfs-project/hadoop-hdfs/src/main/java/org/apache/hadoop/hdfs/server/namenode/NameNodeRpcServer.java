@@ -1442,7 +1442,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
    * added for application registration table 
    */
   @Override //DatanodeProtocol
-  public AppRegisterTable fetchAppRegisterTable(DatanodeRegistration nodeReg,
+  public AppRegisterTable fetchAppRegisterTable(
+          //DatanodeRegistration nodeReg,
           String request) throws IOException{
       //String [] apptable={"app01,user01,80","app02,user01,20","app01,user02,100"};
       String [] apptable=nn.GetApplicationRegistrationTable();
@@ -1455,6 +1456,16 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       }
       return reTable;
   }
+  /**
+   * Compute the IOBandwidth Quota for dfsclient name 
+   */
+  public long[] ComputeQuota(List<String> dfsclients) throws IOException{
+    long[] quotas= new long[dfsclients.size()];
+    for(int i=0;i<quotas.length;i++)
+        quotas[i]=2000000;       //tmp setting to quick test 
+    return quotas;
+  }
+
   @Override // DatanodeProtocol
   public DatanodeCommand blockReport(final DatanodeRegistration nodeReg,
         String poolId, final StorageBlockReport[] reports,

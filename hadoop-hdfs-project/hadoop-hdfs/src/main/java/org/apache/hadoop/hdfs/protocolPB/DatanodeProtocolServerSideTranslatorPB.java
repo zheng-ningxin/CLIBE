@@ -20,6 +20,10 @@ package org.apache.hadoop.hdfs.protocolPB;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -46,6 +50,9 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageBlock
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReceivedDeletedBlocksProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableProto;           //added for application register table 
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableRequestProto;    //added for application register table 
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.IOBandwidthQuotaRequestProto;    //added for application IOBandwidthControl
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.IOBandwidthQuotaResponseProto;   //added for application IOBandwidthControl
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.IOBandwidthQuota;   //added for application IOBandwidthControl
 
 
 
@@ -113,14 +120,38 @@ public class DatanodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
+  public IOBandwidthQuotaResponseProto fetchIOBandwidthQuotaList(
+      RpcController controller, IOBandwidthQuotaRequestProto request)
+      throws ServiceException{
+    List<String> dfsclients= request.getClientnameList();
+    long[] quotalist;       //=new long[1];
+    try{
+        quotalist=impl.ComputeQuota(dfsclients);
+    } catch (IOException ie){
+      throw new ServiceException(ie);  
+    }
+    IOBandwidthQuotaResponseProto.Builder builder=IOBandwidthQuotaResponseProto.newBuilder();
+    Iterator<String> i1 = dfsclients.iterator();
+    int pos=0;
+    while(i1.hasNext() && pos<quotalist.length){
+        IOBandwidthQuota.Builder tmpbuilder=IOBandwidthQuota.newBuilder(); 
+        tmpbuilder.setClientname(i1.next());
+        tmpbuilder.setIobandwidth(quotalist[pos]);pos++;
+        builder.addQuotalist(tmpbuilder.build());
+    }
+    return builder.build();
+  }
+
+  @Override
   public AppRegisterTableProto fetchAppRegisterTable(
       RpcController controller, AppRegisterTableRequestProto request)
       throws ServiceException{
-    DatanodeRegistration registration = PBHelper.convert(request.getRegistration());
+    
+    //DatanodeRegistration registration = PBHelper.convert(request.getRegistration());
     String requestfromdatanode = request.getRequest();
     AppRegisterTable registertable;
     try{
-      registertable=impl.fetchAppRegisterTable(registration,requestfromdatanode);
+      registertable=impl.fetchAppRegisterTable(requestfromdatanode);
     } catch (IOException e){
       throw new ServiceException(e);  
     }
