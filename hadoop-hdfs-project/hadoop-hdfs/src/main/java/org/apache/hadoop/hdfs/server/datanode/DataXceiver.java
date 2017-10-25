@@ -574,7 +574,7 @@ class DataXceiver extends Receiver implements Runnable {
     if(IOQuota>0){
         IOthrottler = new DataTransferThrottler(IOQuota);
     }
-    LOG.info("************************************test info************************************\n");
+    //LOG.info("************************************test info************************************\n");
     LOG.info("DfsClient: "+clientName+"   IOBandwidth: "+String.valueOf(IOQuota)+"\n");
     // send the block
     BlockSender blockSender = null;
@@ -675,6 +675,17 @@ class DataXceiver extends Receiver implements Runnable {
       boolean allowLazyPersist,
       final boolean pinning,
       final boolean[] targetPinnings) throws IOException {
+    long IOQuota=0;
+    if(clientname.length()>0){
+        IOQuota = dataXceiverServer.getIOBandwidthQuotaUsingDfsclient(clientname);
+    }
+    if(IOQuota <=0){
+        LOG.warn("IOBandwidth Quota allocated is lower than zero!!\n");
+    }
+    DataTransferThrottler IOthrottler=null;
+    if(IOQuota>=1000000){
+        IOthrottler = new DataTransferThrottler(IOQuota);
+    }
     previousOpClientName = clientname;
     updateCurrentThreadName("Receiving block " + block);
     final boolean isDatanode = clientname.length() == 0;
@@ -866,7 +877,7 @@ class DataXceiver extends Receiver implements Runnable {
       if (blockReceiver != null) {
         String mirrorAddr = (mirrorSock == null) ? null : mirrorNode;
         blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut,
-            mirrorAddr, null, targets, false);
+            mirrorAddr, IOthrottler, targets, false);
 
         // send close-ack for transfer-RBW/Finalized 
         if (isTransfer) {
