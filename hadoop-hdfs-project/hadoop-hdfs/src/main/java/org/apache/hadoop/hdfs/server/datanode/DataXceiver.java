@@ -675,6 +675,7 @@ class DataXceiver extends Receiver implements Runnable {
       boolean allowLazyPersist,
       final boolean pinning,
       final boolean[] targetPinnings) throws IOException {
+    
     long IOQuota=0;
     if(clientname.length()>0){
         IOQuota = dataXceiverServer.getIOBandwidthQuotaUsingDfsclient(clientname);
@@ -686,6 +687,7 @@ class DataXceiver extends Receiver implements Runnable {
     if(IOQuota>=1000000){
         IOthrottler = new DataTransferThrottler(IOQuota);
     }
+    LOG.info("Test_Info:Clientname: "+clientname+" IOQuota:"+String.valueOf(IOQuota)+"\n");
     previousOpClientName = clientname;
     updateCurrentThreadName("Receiving block " + block);
     final boolean isDatanode = clientname.length() == 0;

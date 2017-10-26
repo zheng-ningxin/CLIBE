@@ -378,6 +378,9 @@ public class NameNode implements NameNodeStatusMXBean {
   
   //nodesMap
   private HashMap<String, List<String>> nodesMap;
+  //App-clients
+  private HashMap<String, Integer> AppClientnum;
+
 
   /** httpServer */
   protected NameNodeHttpServer httpServer;
@@ -932,7 +935,7 @@ public class NameNode implements NameNodeStatusMXBean {
     this.applicationRegistration = new HashMap<String, DfsClientInfo>();
     this.streamMap = new HashMap<String, String>();
     this.nodesMap = new HashMap<String, List<String>>();
-    
+    this.AppClientnum=new HashMap<String,Integer>(); 
     try {
       initializeGenericKeys(conf, nsId, namenodeId);
       initialize(conf);
@@ -952,8 +955,42 @@ public class NameNode implements NameNodeStatusMXBean {
     }
     this.started.set(true);
   }
-
+  private synchronized void AppAddOneClient(String appId){
+      if(AppClientnum.containsKey(appId)){
+        Integer cur=AppClientnum.get(appId);
+        AppClientnum.put(appId,cur+1);
+      }else{
+        AppClientnum.put(appId,1);    
+      }
+      LOG.info("Test_Info: "+appId+" has "+String.valueOf(AppClientnum.get(appId))+" DfsClients\n");
+  }
+  private synchronized void AppMinusOneClient(String appId){
+      if(!AppClientnum.containsKey(appId)){
+        LOG.warn("Intend to unregister a client for unexist application\n");
+        return;
+      }
+      int cur=AppClientnum.get(appId).intValue();
+      if(cur==1){
+        AppClientnum.remove(appId);
+      }else{
+          AppClientnum.put(appId,new Integer(cur-1));
+      }
+  }
+  private synchronized int getAppQuotaUsingClient(String clientname){
+    return applicationRegistration.get(clientname).getAppQuota();
+  }
+  private synchronized String getAppIdUsingClient(String clientname){
+    return applicationRegistration.get(clientname).getAppId();
+  }
+  private synchronized int getAppClientNum(String appId){
+    return AppClientnum.get(appId).intValue(); 
+  }
+  public int ComputeQuota(String clientname){
+      String appid=getAppIdUsingClient(clientname);
+      return getAppQuotaUsingClient(clientname)/getAppClientNum(appid);
+  }
   public synchronized int registerApplication(String userId, String clientName, String appId, int appQuota){
+      AppAddOneClient(appId);
       DfsClientInfo info = new DfsClientInfo(userId,appId,appQuota);
       applicationRegistration.put(clientName,info);
       //for(Map.Entry<String,DfsClientInfo> m : applicationRegistration.entrySet()){
@@ -977,13 +1014,15 @@ public class NameNode implements NameNodeStatusMXBean {
       re.toArray(simplearray);
       return simplearray;
   }
-
+  
   public synchronized int unregisterApplication(String clientName){
+      DfsClientInfo info=applicationRegistration.get(clientName);
+      AppMinusOneClient(info.getAppId());
       applicationRegistration.remove(clientName);
       nodesMap.remove(clientName);
       return 0;
   }
-
+  
   public synchronized int registerStream(String stream, String clientName){
       streamMap.put(stream, clientName);
       // LOG.info("***********");

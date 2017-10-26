@@ -1461,8 +1461,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
    */
   public long[] ComputeQuota(List<String> dfsclients) throws IOException{
     long[] quotas= new long[dfsclients.size()];
-    for(int i=0;i<quotas.length;i++)
-        quotas[i]=2000000;       //tmp setting to quick test 
+    int pos=0;
+    for(String clientname: dfsclients)
+        //quotas[i]=2000000;       //tmp setting to quick test 
+        quotas[pos++]=nn.ComputeQuota(clientname);
     return quotas;
   }
 
