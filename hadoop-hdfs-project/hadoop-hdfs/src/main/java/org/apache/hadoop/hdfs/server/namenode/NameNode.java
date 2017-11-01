@@ -1017,7 +1017,7 @@ public class NameNode implements NameNodeStatusMXBean {
   
   public synchronized int unregisterApplication(String clientName){
       DfsClientInfo info=applicationRegistration.get(clientName);
-      AppMinusOneClient(info.getAppId());
+      if(info!=null)AppMinusOneClient(info.getAppId());
       applicationRegistration.remove(clientName);
       nodesMap.remove(clientName);
       return 0;

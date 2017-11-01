@@ -566,16 +566,19 @@ class DataXceiver extends Receiver implements Runnable {
     LOG.info("Check Point 1\n");
 
     //Get the IOBandwidth Quota 
-    long IOQuota = dataXceiverServer.getIOBandwidthQuotaUsingDfsclient(clientName);
+    long IOQuota=0;
+    IOQuota = dataXceiverServer.getIOBandwidthQuotaUsingDfsclient(clientName);
     if(IOQuota <0){
+        IOQuota=0;
         LOG.warn("IOBandwidth Quota allocated is lower than zero!!\n");
     }
     DataTransferThrottler IOthrottler=null;
     if(IOQuota>0){
+        IOQuota=IOQuota*1024*1024;
         IOthrottler = new DataTransferThrottler(IOQuota);
     }
     //LOG.info("************************************test info************************************\n");
-    LOG.info("DfsClient: "+clientName+"   IOBandwidth: "+String.valueOf(IOQuota)+"\n");
+    LOG.info("Test_Info:"+ "Reading DfsClient: "+clientName+"   IOBandwidth: "+String.valueOf(IOQuota)+"\n");
     // send the block
     BlockSender blockSender = null;
     DatanodeRegistration dnR = 
@@ -681,13 +684,15 @@ class DataXceiver extends Receiver implements Runnable {
         IOQuota = dataXceiverServer.getIOBandwidthQuotaUsingDfsclient(clientname);
     }
     if(IOQuota <=0){
+        IOQuota=0;
         LOG.warn("IOBandwidth Quota allocated is lower than zero!!\n");
     }
     DataTransferThrottler IOthrottler=null;
-    if(IOQuota>=1000000){
+    if(IOQuota>=1){//1M the lower bound of IO BandWidth
+        IOQuota=IOQuota*1024*1024;       // The number of the bytes  
+        IOQuota=IOQuota/pipelineSize;    // If there are more than one replicas,they will share the IOQuota
         IOthrottler = new DataTransferThrottler(IOQuota);
     }
-    LOG.info("Test_Info:Clientname: "+clientname+" IOQuota:"+String.valueOf(IOQuota)+"\n");
     previousOpClientName = clientname;
     updateCurrentThreadName("Receiving block " + block);
     final boolean isDatanode = clientname.length() == 0;
@@ -706,6 +711,8 @@ class DataXceiver extends Receiver implements Runnable {
       throw new IOException(stage + " does not support multiple targets "
           + Arrays.asList(targets));
     }
+    LOG.info("Test_Info:Clientname: "+clientname+" IOQuota:"+String.valueOf(IOQuota)+" pipelineSize:"+String.valueOf(pipelineSize)+" Targets left:" 
+            +String.valueOf(targets.length)+" IsClient:"+String.valueOf(isClient)+"\n");
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("opWriteBlock: stage=" + stage + ", clientname=" + clientname 

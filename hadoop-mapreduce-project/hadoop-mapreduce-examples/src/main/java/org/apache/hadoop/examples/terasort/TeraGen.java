@@ -17,7 +17,7 @@
  */
 
 package org.apache.hadoop.examples.terasort;
-
+import java.io.FileWriter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -245,7 +245,7 @@ public class TeraGen extends Configured implements Tool {
   }
 
   private static void usage() throws IOException {
-    System.err.println("teragen <num rows> <output dir>");
+    System.err.println("teragen <num rows> <output dir> <IOBandWidth> <Cache On/Off>");
   }
 
   /**
@@ -283,7 +283,7 @@ public class TeraGen extends Configured implements Tool {
   public int run(String[] args) 
       throws IOException, InterruptedException, ClassNotFoundException {
     Job job = Job.getInstance(getConf());
-    if (args.length != 2) {
+    if (args.length != 4) {
       usage();
       return 2;
     }
@@ -302,7 +302,29 @@ public class TeraGen extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(new Configuration(), new TeraGen(), args);
+    long timestart=System.currentTimeMillis();
+    if(args.length!=4){
+        System.out.println("terahen <num rows> <output dir>  <IOQuota MB> <Cache ON/OFF>");
+        System.exit(-1);
+    }
+    int IOQuota=Integer.parseInt(args[2]);
+    int flag=Integer.parseInt(args[3]);
+    Configuration conf=new Configuration();
+    conf.setIOAppQuota(IOQuota);
+    if(flag==0)
+        conf.set("fs.hdfs.impl.disable.cache","true");
+    int res = ToolRunner.run(conf, new TeraGen(), args);
+    long timeend=System.currentTimeMillis();
+    double time=(timeend-timestart)/1000.0;
+    System.out.println("Time Cost:  "+String.valueOf(time)+"s");
+    try{
+        FileWriter writer=new FileWriter("/home/nxzheng/mapreduce.txt",true);
+        String content="Rows: "+args[0]+"  IOQuota: "+String.valueOf(IOQuota)+"  Cache ON/Off:"+String.valueOf(flag)+"  Time Cost:"+String.valueOf(time)+"\n";
+        writer.write(content);
+        writer.close();
+    }catch(Exception e){
+        System.out.println(e);
+    }
     System.exit(res);
   }
 }
