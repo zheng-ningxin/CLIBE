@@ -19,6 +19,7 @@
 package org.apache.hadoop.examples.terasort;
 
 import java.io.DataInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
@@ -282,7 +283,7 @@ public class TeraSort extends Configured implements Tool {
   }
 
   private static void usage() throws IOException {
-    System.err.println("Usage: terasort [-Dproperty=value] <in> <out>");
+    System.err.println("Usage: terasort [-Dproperty=value] <in> <out> <IOQuota>");
     System.err.println("TeraSort configurations are:");
     for (TeraSortConfigKeys teraSortConfigKeys : TeraSortConfigKeys.values()) {
       System.err.println(teraSortConfigKeys.toString());
@@ -290,7 +291,7 @@ public class TeraSort extends Configured implements Tool {
   }
 
   public int run(String[] args) throws Exception {
-    if (args.length != 2) {
+    if (args.length != 3) {
       usage();
       return 2;
     }
@@ -337,7 +338,28 @@ public class TeraSort extends Configured implements Tool {
    * @param args
    */
   public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(new Configuration(), new TeraSort(), args);
+    if(args.length!=3){
+        System.exit(3);
+        System.out.println("Usage:TeraSort <in dir> <out dir> <IOQuota>");
+    }
+    long timestart=System.currentTimeMillis();
+    Configuration conf=new Configuration();
+    int IOQuota=Integer.parseInt(args[2]);
+    conf.setIOAppQuota(IOQuota);
+    int res = ToolRunner.run(conf, new TeraSort(), args);
+    
+    long timeend=System.currentTimeMillis();
+    double time=(timeend-timestart)/1000.0;
+    System.out.println("Time Cost:  "+String.valueOf(time)+"s");
+    try{
+        FileWriter writer=new FileWriter("/home/nxzheng/terasort.txt",true);
+        String content="Datasize: "+args[0]+"  IOQuota: "+String.valueOf(IOQuota)+"  Time Cost:"+String.valueOf(time)+"\n";
+        writer.write(content);
+        writer.close();
+    }catch(Exception e){
+        System.out.println(e);
+    } 
+
     System.exit(res);
   }
 

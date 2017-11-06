@@ -324,7 +324,7 @@ public class TeraGen extends Configured implements Tool {
         writer.close();
     }catch(Exception e){
         System.out.println(e);
-    }
+    } 
     System.exit(res);
   }
 }
