@@ -716,7 +716,7 @@ public class DFSInputStream extends FSInputStream
       return;
     }
     dfsClient.checkOpen();
-    dfsClient.unregisterStream(this.toString());
+    //dfsClient.unregisterStream(this.toString());
     if ((extendedReadBuffers != null) && (!extendedReadBuffers.isEmpty())) {
       final StringBuilder builder = new StringBuilder();
       extendedReadBuffers.visitAll(new IdentityHashStore.Visitor<ByteBuffer, Object>() {
