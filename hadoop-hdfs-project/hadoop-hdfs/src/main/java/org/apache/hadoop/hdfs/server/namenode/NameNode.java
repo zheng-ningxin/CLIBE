@@ -962,11 +962,11 @@ public class NameNode implements NameNodeStatusMXBean {
       }else{
         AppClientnum.put(appId,1);    
       }
-      LOG.info("Test_Info: "+appId+" has "+String.valueOf(AppClientnum.get(appId))+" DfsClients\n");
+      //LOG.info("Test_Info: "+appId+" has "+String.valueOf(AppClientnum.get(appId))+" DfsClients\n");
   }
   private synchronized void AppMinusOneClient(String appId){
       if(!AppClientnum.containsKey(appId)){
-        LOG.warn("Intend to unregister a client for unexist application\n");
+        //LOG.warn("Intend to unregister a client for unexist application\n");
         return;
       }
       int cur=AppClientnum.get(appId).intValue();
@@ -1025,33 +1025,21 @@ public class NameNode implements NameNodeStatusMXBean {
   
   public synchronized int registerStream(String stream, String clientName){
       streamMap.put(stream, clientName);
-      // LOG.info("***********");
-      // for(Map.Entry<String,String> m : streamMap.entrySet()){
-      //   LOG.info("streamMap: "+m.getKey()+" "+m.getValue());
-      // }
       return 0;
   }
   
   public synchronized int unregisterStream(String stream){
       streamMap.remove(stream);
-      // LOG.info("***********");
-      // for(Map.Entry<String,String> m : streamMap.entrySet()){
-      //   LOG.info("streamMap: "+m.getKey()+" "+m.getValue());
-      // }
       return 0;
   }
 
   public synchronized int registerNodes(String clientName, List<String> nodes){
       nodesMap.put(clientName,nodes);
-       LOG.info("***********");
        for(Map.Entry<String,List<String>> m : nodesMap.entrySet()){
-         LOG.info("nodesMap: "+m.getKey());
          List<String> nodelist = m.getValue();
          for(String n:nodelist){
-             LOG.info(n);
          }
        }
-       LOG.info("***********");
       return 0;
   }
   

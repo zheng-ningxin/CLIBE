@@ -563,22 +563,20 @@ class DataXceiver extends Receiver implements Runnable {
     DataOutputStream out = getBufferedOutputStream();
     checkAccess(out, true, block, blockToken,
         Op.READ_BLOCK, BlockTokenIdentifier.AccessMode.READ);
-    LOG.info("Check Point 1\n");
 
     //Get the IOBandwidth Quota 
     long IOQuota=0;
     IOQuota = dataXceiverServer.getIOBandwidthQuotaUsingDfsclient(clientName);
     if(IOQuota <0){
         IOQuota=0;
-        LOG.warn("IOBandwidth Quota allocated is lower than zero!!\n");
+        //LOG.warn("IOBandwidth Quota allocated is lower than zero!!\n");
     }
     DataTransferThrottler IOthrottler=null;
     if(IOQuota>0){
         IOQuota=IOQuota*1024*1024;
         IOthrottler = new DataTransferThrottler(IOQuota);
     }
-    //LOG.info("************************************test info************************************\n");
-    LOG.info("Test_Info:"+ "Reading DfsClient: "+clientName+"   IOBandwidth: "+String.valueOf(IOQuota)+"\n");
+    //LOG.info("Test_Info:"+ "Reading DfsClient: "+clientName+"   IOBandwidth: "+String.valueOf(IOQuota)+"\n");
     // send the block
     BlockSender blockSender = null;
     DatanodeRegistration dnR = 
@@ -685,7 +683,7 @@ class DataXceiver extends Receiver implements Runnable {
     }
     if(IOQuota <=0){
         IOQuota=0;
-        LOG.warn("IOBandwidth Quota allocated is lower than zero!!\n");
+        //LOG.warn("IOBandwidth Quota allocated is lower than zero!!\n");
     }
     DataTransferThrottler IOthrottler=null;
     if(IOQuota>=1){//1M the lower bound of IO BandWidth
@@ -711,8 +709,8 @@ class DataXceiver extends Receiver implements Runnable {
       throw new IOException(stage + " does not support multiple targets "
           + Arrays.asList(targets));
     }
-    LOG.info("Test_Info:Clientname: "+clientname+" IOQuota:"+String.valueOf(IOQuota)+" pipelineSize:"+String.valueOf(pipelineSize)+" Targets left:" 
-            +String.valueOf(targets.length)+" IsClient:"+String.valueOf(isClient)+"\n");
+    //LOG.info("Test_Info:Clientname: "+clientname+" IOQuota:"+String.valueOf(IOQuota)+" pipelineSize:"+String.valueOf(pipelineSize)+" Targets left:" 
+            //+String.valueOf(targets.length)+" IsClient:"+String.valueOf(isClient)+"\n");
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("opWriteBlock: stage=" + stage + ", clientname=" + clientname 
