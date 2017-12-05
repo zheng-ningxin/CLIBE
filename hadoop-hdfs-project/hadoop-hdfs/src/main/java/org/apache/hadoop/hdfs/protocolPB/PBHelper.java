@@ -45,7 +45,11 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterComm
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableRequestProto; //Added for App registration table 
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableProto; //Added for App registration table 
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterTableProto;        //Added for App registration table 
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StatisticInfoReportProto;     //Added for feed back menchanism 
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StatisticInfoResponseProto;   //Added for feed back menchanism 
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DfsClientIOInfo;              //Added for feed back menchanism 
+
 
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto;
@@ -199,6 +203,22 @@ public class PBHelper {
     final List<String> appregistertable=b.getTableList();
     return new AppRegisterTable(appregistertable.toArray(new String[appregistertable.size()]));
   }
+  /**
+   * Feed Back menchanism 
+   */
+
+ // public static List<DfsClientProcessInfo> convert(List<DfsClientIOInfo> in){
+ //   List<DfsClientProcessInfo> re=new ArrayList();
+ //   for(DfsClientIOInfo info: in){
+ //       DfsClientProcessInfo tmp=new DfsClientProcessInfo(
+ //           info.getClientname(),
+ //           info.getIoquota(),
+ //           info.getIospeed(),
+ //           info.getDatasize());
+ //       re.add(tmp);
+ //   }
+ //   return re;
+ // }
 
   public static BlocksWithLocationsProto convert(BlocksWithLocations blks) {
     BlocksWithLocationsProto.Builder builder = BlocksWithLocationsProto

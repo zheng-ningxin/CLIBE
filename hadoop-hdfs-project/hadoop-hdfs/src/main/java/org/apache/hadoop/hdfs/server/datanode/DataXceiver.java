@@ -603,7 +603,7 @@ class DataXceiver extends Receiver implements Runnable {
       
       // send op status
       writeSuccessWithChecksumInfo(blockSender, new DataOutputStream(getOutputStream()));
-
+ 
       long beginRead = Time.monotonicNow();
       //read = blockSender.sendBlock(out, baseStream, null); // send data
       read = blockSender.sendBlock(out, baseStream, IOthrottler); // send data
@@ -631,6 +631,12 @@ class DataXceiver extends Receiver implements Runnable {
       datanode.metrics.incrBytesRead((int) read);
       datanode.metrics.incrBlocksRead();
       datanode.metrics.incrTotalReadTime(duration);
+      //update statistic information
+      //duration in milliseconds
+      double IOSpeed=length/1024.0/1024*1000.0/duration;
+      dataXceiverServer.updateAfterRequestFinished(clientName,1.0*IOQuota,IOSpeed,length/1024/1024*1.0);
+    
+    
     } catch ( SocketException ignored ) {
       if (LOG.isTraceEnabled()) {
         LOG.trace(dnR + ":Ignoring exception while serving " + block + " to " +
@@ -652,7 +658,6 @@ class DataXceiver extends Receiver implements Runnable {
     } finally {
       IOUtils.closeStream(blockSender);
     }
-
     //update metrics
     datanode.metrics.addReadBlockOp(elapsed());
     datanode.metrics.incrReadsFromClient(peer.isLocal(), read);
@@ -692,6 +697,8 @@ class DataXceiver extends Receiver implements Runnable {
         IOthrottler = new DataTransferThrottler(IOQuota);
     }
     previousOpClientName = clientname;
+    long beginWrite=Time.monotonicNow();
+
     updateCurrentThreadName("Receiving block " + block);
     final boolean isDatanode = clientname.length() == 0;
     final boolean isClient = !isDatanode;
@@ -928,6 +935,12 @@ class DataXceiver extends Receiver implements Runnable {
       IOUtils.closeStream(blockReceiver);
       setCurrentBlockReceiver(null);
     }
+    //update statistic information
+    long duration=Time.monotonicNow()-beginWrite;
+    //duration in milliseconds
+    double length=block.getNumBytes()/1024.0/1024;    //Use MB as the unit
+    double IOSpeed=length*1000.0/duration;
+    dataXceiverServer.updateAfterRequestFinished(clientname,1.0*IOQuota,IOSpeed,length*1.0);
 
     //update metrics
     datanode.getMetrics().addWriteBlockOp(elapsed());

@@ -53,7 +53,9 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterT
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.IOBandwidthQuotaRequestProto;    //added for application IOBandwidthControl
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.IOBandwidthQuotaResponseProto;   //added for application IOBandwidthControl
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.IOBandwidthQuota;   //added for application IOBandwidthControl
-
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StatisticInfoReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DfsClientIOInfo;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StatisticInfoResponseProto;
 
 
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
@@ -73,6 +75,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.hdfs.server.protocol.AppRegisterTable;
+import org.apache.hadoop.hdfs.server.protocol.DfsClientProcessInfo;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.RpcController;
@@ -118,15 +121,37 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     return RegisterDatanodeResponseProto.newBuilder()
         .setRegistration(PBHelper.convert(registrationResp)).build();
   }
-
+  @Override
+  public StatisticInfoResponseProto sendStatisticInfo(
+          RpcController controller,StatisticInfoReportProto report)
+      throws ServiceException{
+    String DataXceiverServerID=report.getDataxceiverserverid();
+    List<DfsClientIOInfo> tmplist=report.getDfsclientsioinfoList();
+    List<DfsClientProcessInfo> dfsclients=new ArrayList();
+    for(DfsClientIOInfo info : tmplist){
+        DfsClientProcessInfo tmp=new DfsClientProcessInfo(info.getClientname(),
+                info.getIoquota(),
+                info.getIospeed(),
+                info.getDatasize());
+        dfsclients.add(tmp);
+    }
+    try{
+        impl.statisticReport(DataXceiverServerID,dfsclients);
+    } catch(IOException e){
+        throw new ServiceException(e);
+    }
+    return null;
+  }
   @Override
   public IOBandwidthQuotaResponseProto fetchIOBandwidthQuotaList(
       RpcController controller, IOBandwidthQuotaRequestProto request)
       throws ServiceException{
+    String DataXceiverServerID=request.hasDataxceiverserverid() ? request.getDataxceiverserverid() : "";
+
     List<String> dfsclients= request.getClientnameList();
     long[] quotalist;       //=new long[1];
     try{
-        quotalist=impl.ComputeQuota(dfsclients);
+        quotalist=impl.ComputeQuota(DataXceiverServerID,dfsclients);
     } catch (IOException ie){
       throw new ServiceException(ie);  
     }
@@ -162,7 +187,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     }
     return builder.build();
   }
-
+ 
   @Override
   public HeartbeatResponseProto sendHeartbeat(RpcController controller,
       HeartbeatRequestProto request) throws ServiceException {

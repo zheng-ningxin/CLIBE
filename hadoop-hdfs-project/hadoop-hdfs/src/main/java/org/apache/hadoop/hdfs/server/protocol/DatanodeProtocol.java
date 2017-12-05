@@ -28,7 +28,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.security.KerberosInfo;
-
 /**********************************************************************
  * Protocol that a DFS datanode uses to communicate with the NameNode.
  * It's used to upload current load information and block reports.
@@ -76,7 +75,7 @@ public interface DatanodeProtocol {
   final static int DNA_BALANCERBANDWIDTHUPDATE = 8; // update balancer bandwidth
   final static int DNA_CACHE = 9;      // cache blocks
   final static int DNA_UNCACHE = 10;   // uncache blocks
-
+ 
   /** 
    * Register Datanode.
    *
@@ -126,13 +125,18 @@ public interface DatanodeProtocol {
   @Idempotent
   public AppRegisterTable fetchAppRegisterTable(//DatanodeRegistration registration,
                                                    String request) throws IOException;
-
+  
   /**
    * FetchIOBandwidthQuota() From the Namenode 
    */
   @Idempotent
-  public long[] ComputeQuota(List<String> dfsclients) throws IOException;
+  public long[] ComputeQuota(String DataXceiverServerID,List<String> dfsclients) throws IOException;
 
+  /**
+   * FeedBack Menchanism, Datanode send the statistic information to Namenode
+   */
+  @Idempotent
+  public void statisticReport(String DataXceiverServerID ,List<DfsClientProcessInfo> dfsclients)throws IOException;
   /**
    * blockReport() tells the NameNode about all the locally-stored blocks.
    * The NameNode returns an array of Blocks that have become obsolete

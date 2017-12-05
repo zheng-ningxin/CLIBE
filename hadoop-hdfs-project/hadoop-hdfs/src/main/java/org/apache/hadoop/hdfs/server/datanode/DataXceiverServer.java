@@ -34,14 +34,19 @@ import org.apache.hadoop.util.Daemon;
 import com.google.common.annotations.VisibleForTesting;
 
 import org.slf4j.Logger;
-//Added for IOBandwidthManager
+//Added for communication between NameNode and DataXceiverServer
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.DFSUtil;
 import java.net.InetSocketAddress;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
-
+import java.util.concurrent.ConcurrentHashMap;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.lang.Math;
+import org.apache.hadoop.hdfs.server.protocol.DfsClientProcessInfo;
 /**
  * Server used for receiving/sending a block of data.
  * This is created to listen for requests from clients or
@@ -56,7 +61,12 @@ class DataXceiverServer implements Runnable {
   private final HashMap<Peer, Thread> peers = new HashMap<Peer, Thread>();
   private final HashMap<Peer, DataXceiver> peersXceiver = new HashMap<Peer, DataXceiver>();
   private boolean closed = false;
+  //IORequests ---Batching-->IORequestList
   private IOBandwidthManagerDatanodeSide IOBandwidthManager;
+  private FeedBackManagerDatanodeSide FeedBackManager;
+  ConcurrentHashMap<String,DfsClientProcessInfo> statisticInfo=new ConcurrentHashMap<String,DfsClientProcessInfo>(1000);
+  private String DataXceiverServerID;
+
   private final Configuration conf;
   private DatanodeProtocolClientSideTranslatorPB bpNamenode=null;
 
@@ -148,9 +158,9 @@ class DataXceiverServer implements Runnable {
             DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT));
     this.conf=conf;
   }
+ 
 
-  //PLAN B:Added for start the IOBandwidthManagerDatanodeSide thread
-  
+  //start the thread to Batch the IO Request into a IO Request List   
   private void startIOBandwidthManagerDatanodeSide() {
     try{
         Map<String, Map<String, InetSocketAddress> > AddressMap = DFSUtil
@@ -162,24 +172,51 @@ class DataXceiverServer implements Runnable {
         LOG.warn("In DataXceiverServer.startIOBandwidthManagerDatanodeSide :"+ex);
     }
   }
+
+  private void startFeedBackManagerDatanodeSide(){
+    try{
+        createDataXceiverServerID();
+        Map<String, Map<String, InetSocketAddress> > AddressMap = DFSUtil
+          .getNNServiceRpcAddressesForCluster(conf);
+        FeedBackManager=new FeedBackManagerDatanodeSide(datanode,this);
+        Thread FeedBackManagerThread=new Thread(FeedBackManager);
+        FeedBackManagerThread.start();
+    }catch(Exception ex){
+        LOG.warn("Exception happend in DataXceiverServer startFeedBackManagerDatanodeSide "+ex);
+    }  
+  }
+  public void sendStatisticReport(){
+    List<DfsClientProcessInfo> dfsclients=new ArrayList<DfsClientProcessInfo>();
+    synchronized(statisticInfo){
+        Iterator<Map.Entry<String,DfsClientProcessInfo> > entries = statisticInfo.entrySet().iterator();
+        while(entries.hasNext()){
+            Map.Entry<String,DfsClientProcessInfo> entry=entries.next();
+            dfsclients.add(entry.getValue());
+        }
+        statisticInfo.clear();
+    }
+    try{
+        bpNamenode.statisticReport(this.DataXceiverServerID,dfsclients);  
+    } catch(IOException ie){
+        LOG.warn("Exception in sendStatisticReport of DataXceiverServer "+ie);
+    }
+  }
+
   public long getIOBandwidthQuotaUsingDfsclient(String clientname){
     List<String> clientslist= new ArrayList<String>();
     clientslist.add(clientname);
     long[] quota=null;
     try{
-        quota=bpNamenode.ComputeQuota(clientslist);
+        quota=bpNamenode.ComputeQuota(this.DataXceiverServerID,clientslist);
     } catch(IOException ie){
         LOG.warn("In getIOBandwidthQuotaUsingDfsclient of DataXceiverServer.java:"+ie);
     }
     if(quota!=null)
         return quota[0];
     else
-        return -1;
-    
-    
+        return -1; 
   }
-  //PLAN A:Simple version, inplements the rpc mechanism in DataXceiverServer 
-  //to test if bpnamenode works
+
   private void GetRpcHandlerForIOControl(){
     InetSocketAddress nnAddr;
     try{
@@ -212,11 +249,40 @@ class DataXceiverServer implements Runnable {
         LOG.warn("DataXceiverServer: Exception in GetRpcHandlerForIOControl "+ex);
     }
   }
+  public void createDataXceiverServerID(){
+    String DataXceiverServerID="";
+    try{
+        InetAddress local=InetAddress.getLocalHost();
+        if(local!=null){
+            DataXceiverServerID+=local.getHostAddress();
+        }
+    }catch(UnknownHostException ue){
+        LOG.warn("Can't get host name of this DataXceiverServer"+ue);
+    }finally{
+        final int MaxDN_Num=100001;
+        int tmpid=(int)(Math.random()*MaxDN_Num);
+        DataXceiverServerID+="_"+String.valueOf(tmpid);
+    }
+    this.DataXceiverServerID=DataXceiverServerID;
+  } 
+  public void updateAfterRequestFinished(String clientname,double ioquota,double iospeed,double datasize ){
+    //Using concurrent map
+    LOG.info("Test_Info:"+clientname+" Quota:"+ String.valueOf(ioquota) 
+            +" IOSpeed:"+String.valueOf(iospeed)+" DataSize:"+String.valueOf(datasize));
+    if(statisticInfo.containsKey(clientname)){
+        statisticInfo.get(clientname).update(ioquota,iospeed,datasize);     
+    }else{
+        DfsClientProcessInfo newclient=new DfsClientProcessInfo(clientname);
+        newclient.update(ioquota,iospeed,datasize);
+        statisticInfo.put(clientname,newclient);
+    }
+  }
 
   @Override
   public void run() {
     Peer peer = null;
     //startIOBandwidthManagerDatanodeSide();
+    startFeedBackManagerDatanodeSide();
     GetRpcHandlerForIOControl();
     while (datanode.shouldRun && !datanode.shutdownForUpgrade) {
       try {

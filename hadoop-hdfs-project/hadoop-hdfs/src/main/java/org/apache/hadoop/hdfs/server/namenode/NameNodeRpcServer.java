@@ -29,6 +29,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_DEPTH;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_LENGTH;
 import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
+import static org.apache.hadoop.util.Time.formatTime;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -41,6 +43,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.collect.Lists;
 
@@ -154,7 +157,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.hdfs.server.protocol.AppRegisterTable;
-
+import org.apache.hadoop.hdfs.server.protocol.DfsClientProcessInfo;
 
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
@@ -679,23 +682,27 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public int registerStream(String stream, String clientName) 
       throws IOException {
-    return nn.registerStream(stream, clientName);
+    //return nn.registerStream(stream, clientName);
+    return 0;
   }
   
   @Override // ClientProtocol
   public int unregisterStream(String stream) 
       throws IOException {
-    return nn.unregisterStream(stream);
+    //return nn.unregisterStream(stream);
+    return 0;
   }
 
   @Override // ClientProtocol
   public int registerNodes(String clientName, DatanodeInfo[] nodes) 
       throws IOException {
+    /*
     List<String> nodelist = new ArrayList<String>();
     for(int i=0;i<nodes.length;++i){
         nodelist.add(nodes[i].getDatanodeUuid());
     }
-    return nn.registerNodes(clientName,nodelist);
+    return nn.registerNodes(clientName,nodelist);*/
+    return 0;
   }
   
 
@@ -1438,6 +1445,40 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         dnCacheCapacity, dnCacheUsed, xceiverCount, xmitsInProgress,
         failedVolumes, volumeFailureSummary, requestFullBlockReportLease);
   }
+  @Override //DatanodeProtocol
+  public void statisticReport(String DataXceiverServerID,List<DfsClientProcessInfo> dfsclients) throws IOException{
+    nn.statisticInfoProcess(DataXceiverServerID,dfsclients);
+    /*
+    Long timenow=new Long(monotonicNow());
+    //FeedbackLastUpdated.put(DataXceiverServerID,timenow);
+    //DataNode Level feed back mechanism
+    double SumDataSize=0.0;
+    double IOSpeedAvg=0.0;
+    double IOQuotaAvg=0.0;
+    for(DfsClientProcessInfo info:dfsclients){
+        //DfsClient Level feed back mechanism
+        SumDataSize+=info.getDataSize();
+        double quota=info.getIOQuota();
+        double speed=info.getIOSpeed();
+        double effect=speed/quota;
+        String clientname=info.getClientname();
+        
+        if(DfsClientsFeedBackIOInfo.containsKey(clientname)){
+            DfsClientsFeedBackIOInfo.get(clientname).set(quota,effect);
+        }else{
+            //The DfsClient is finished do nothing
+        }
+        IOSpeedAvg+=speed*info.getDataSize();
+        IOQuotaAvg+=quota*info.getDataSize();
+        //LOG.info("Test_Info:From "+DataXceiverServerID+"  "+info.getClientname()+" "+info.getIOSpeed());
+    }
+    IOQuotaAvg/=SumDataSize;
+    IOSpeedAvg/=SumDataSize;
+    //Here we define a parameter Effect to describe the validity of the allocatedIOQuota as : IOSpeed/IOQuota 
+    double Effect=IOSpeedAvg/IOQuotaAvg;
+    */
+  }
+
   /**
    * added for application registration table 
    */
@@ -1459,11 +1500,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   /**
    * Compute the IOBandwidth Quota for dfsclient name 
    */
-  public long[] ComputeQuota(List<String> dfsclients) throws IOException{
+  public long[] ComputeQuota(String DataXceiverServerID , List<String> dfsclients) throws IOException{
     long[] quotas= new long[dfsclients.size()];
     int pos=0;
     for(String clientname: dfsclients)
-        //quotas[i]=2000000;       //tmp setting to quick test 
         quotas[pos++]=nn.ComputeQuota(clientname);
     return quotas;
   }

@@ -382,7 +382,8 @@ message AppRegisterTableProto{
  * Get the IOBandwidth Quota for Dfsclient from the Namenode
  */
 message IOBandwidthQuotaRequestProto{
-  repeated string clientname=1; 
+  optional string dataxceiverserverid=1;
+  repeated string clientname=2; 
 }
 /**
  * IOBandwidth Quota message struct  for clientname 
@@ -398,6 +399,22 @@ message IOBandwidthQuotaResponseProto{
   repeated IOBandwidthQuota quotalist=1;      
 }
 /**
+ * FeedBack menchanism
+ */
+message DfsClientIOInfo{
+   required string clientname=1;
+   required double ioquota=2;
+   required double iospeed=3;
+   required double datasize=4;
+}
+message StatisticInfoReportProto{
+   required string dataxceiverserverid=1;
+   repeated DfsClientIOInfo dfsclientsioinfo=2;
+}
+message StatisticInfoResponseProto{
+}
+
+/**
  * void response
  */
 message CommitBlockSynchronizationResponseProto {
@@ -408,6 +425,11 @@ message CommitBlockSynchronizationResponseProto {
  * See the request and response for details of rpc call.
  */
 service DatanodeProtocolService {
+  /**
+   *Send Statistic Information to  
+   */
+  rpc sendStatisticInfo(StatisticInfoReportProto)
+      returns(StatisticInfoResponseProto);
   /**
    *Fetch the application Register table from the Namenode
    */

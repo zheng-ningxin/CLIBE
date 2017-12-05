@@ -51,6 +51,9 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.AppRegisterT
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.IOBandwidthQuota;   //added for IOBandwidth
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.IOBandwidthQuotaRequestProto;   //added for IOBandwidth
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.IOBandwidthQuotaResponseProto;   //added for IOBandwidth
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StatisticInfoReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StatisticInfoResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DfsClientIOInfo;
 
 
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionRequestProto;
@@ -67,6 +70,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.hdfs.server.protocol.AppRegisterTable;    //added for application registration table
+import org.apache.hadoop.hdfs.server.protocol.DfsClientProcessInfo;
 
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -151,9 +155,10 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     return PBHelper.convert(resp);
   }
   @Override
-  public long[] ComputeQuota(List<String> dfsclients) throws IOException{
+  public long[] ComputeQuota(String DataXceiverServerID,List<String> dfsclients) throws IOException{
     IOBandwidthQuotaRequestProto.Builder builder = IOBandwidthQuotaRequestProto
         .newBuilder();
+    builder.setDataxceiverserverid(DataXceiverServerID);
     for(String clientname : dfsclients){
         builder.addClientname(clientname);
     }
@@ -170,6 +175,26 @@ public class DatanodeProtocolClientSideTranslatorPB implements
         re[pos++]=cur.getIobandwidth();
     }
     return re;
+  }
+
+  @Override
+  public void statisticReport(String DataXceiverServerID,List<DfsClientProcessInfo> dfsclients)throws IOException{
+    StatisticInfoReportProto.Builder builder = StatisticInfoReportProto.newBuilder();
+    builder.setDataxceiverserverid(DataXceiverServerID);
+    for(DfsClientProcessInfo info: dfsclients){
+        DfsClientIOInfo.Builder tmpbuilder = DfsClientIOInfo.newBuilder();
+        tmpbuilder.setClientname(info.getClientname());
+        tmpbuilder.setIoquota(info.getIOQuota());
+        tmpbuilder.setIospeed(info.getIOSpeed());
+        tmpbuilder.setDatasize(info.getDataSize());
+        builder.addDfsclientsioinfo(tmpbuilder.build());
+    }
+    StatisticInfoResponseProto resp;
+    try{
+        resp= rpcProxy.sendStatisticInfo(NULL_CONTROLLER,builder.build());
+    } catch(ServiceException se) {
+        throw ProtobufHelper.getRemoteException(se);
+    }
   }
 
   @Override
