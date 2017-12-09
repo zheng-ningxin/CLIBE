@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.protocol.DfsClientProcessInfo;     // added for FeedBack mechanism
 
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
@@ -61,6 +60,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.DfsClientProcessInfo;     // added for FeedBack mechanism
+
 import org.apache.hadoop.ipc.ExternalCall;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.RetriableException;
@@ -83,6 +84,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
+
 import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,6 +105,7 @@ import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
@@ -150,7 +153,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB
 import static org.apache.hadoop.hdfs.DFSConfigKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
-
+import static org.apache.hadoop.util.Time.monotonicNow;
 /**********************************************************
  * NameNode serves as both directory namespace manager and
  * "inode table" for the Hadoop DFS.  There is a single NameNode
@@ -191,6 +194,7 @@ import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 
 @InterfaceAudience.Private
 public class NameNode implements NameNodeStatusMXBean {
+  public static final long FeedBackPeriodDuration=2*1000;
   class DfsClientInfo{
     private String UserId;
     private String AppId;
@@ -214,15 +218,29 @@ public class NameNode implements NameNodeStatusMXBean {
     public int getAppQuota(){
         return AppQuota;
     }
+
   }
 
-  /**Variables added for feed back mechanism*/
+  /** Variables added for feed back mechanism*/
   public static class IOInfo{
-    private double quota;
-    private double effect;
-    public IOInfo(double quota,double effect){
+    private  long datasize;
+    private  double quota;
+    private  double effect;   //iospeed / ioquota
+    private  long updatepoint;
+    public IOInfo(long datasize,double quota,double effect){
+        this.datasize=datasize;
         this.quota=quota;
         this.effect=effect;
+        this.updatepoint=monotonicNow();
+    }
+    public IOInfo(){
+        this.datasize=0;
+        this.quota=0.0;
+        this.effect=0.0;
+        this.updatepoint=monotonicNow();
+    }
+    public long getDataSize(){
+        return datasize;
     }
     public double getQuota(){
         return quota;
@@ -230,14 +248,38 @@ public class NameNode implements NameNodeStatusMXBean {
     public double getEffect(){
         return effect;
     }
-    public void set(double quota,double effect){
+    public synchronized void set(long datasize,double quota,double effect){
+        this.datasize=datasize;
         this.quota=quota;
         this.effect=effect;
+        this.updatepoint=monotonicNow();
     }
-    public void setQuota(double quota){this.quota=quota;}
-    public void setEffect(double effect){this.effect=effect;}
+    //return original_datasize - new_datasize
+    public synchronized long update(long datasize,double quota,double effect){
+        //Using Datasize to decide the weight parameter of the next Feedback period
+        long timenow=monotonicNow();
+        //LOG.info("Test_Info: update operation now:"+String.valueOf(timenow)+" last:"+String.valueOf(updatepoint));
+        if(timenow-updatepoint>=NameNode.FeedBackPeriodDuration){
+            long tmp=datasize-this.datasize;
+            this.datasize=datasize;
+            this.updatepoint=timenow;
+            return tmp;
+        }else{
+            if(this.datasize<datasize){
+                long tmp=datasize-this.datasize;
+                this.datasize=datasize;
+                this.updatepoint=timenow;
+                return tmp;
+            }
+        }
+        return 0;
+    }
   }
-  private ConcurrentHashMap<String,IOInfo> DfsClientsFeedBackIOInfo=new ConcurrentHashMap<String,IOInfo>(100000); 
+  FeedBackManagerNamenodeSide FeedBackManager;
+  private ConcurrentHashMap<String,IOInfo> DfsClientsFeedBackIOInfo=new ConcurrentHashMap<String,IOInfo>(99991); 
+  // Stores the DataSize this applicaiton processed in the last FeedBack period . Key: appid Value:Datasize
+  private ConcurrentHashMap<String,AtomicLong> AppDataSize=new ConcurrentHashMap<String,AtomicLong>(99991);
+  /** End */
 
   static{
     HdfsConfiguration.init();
@@ -775,6 +817,10 @@ public class NameNode implements NameNodeStatusMXBean {
 
     startCommonServices(conf);
     startMetricsLogger(conf);
+    //added for FeedBack mechanism
+    FeedBackManager= new FeedBackManagerNamenodeSide(this);
+    Thread FeedBackManagerThread= new Thread(FeedBackManager);
+    FeedBackManagerThread.start();
   }
 
   /**
@@ -982,20 +1028,35 @@ public class NameNode implements NameNodeStatusMXBean {
     }
     this.started.set(true);
   }
-
+  public void filterInvalid(){
+      for(Map.Entry<String,IOInfo> entry : DfsClientsFeedBackIOInfo.entrySet()){
+       final String clientname=entry.getKey();
+       final IOInfo info=entry.getValue();
+       long tmpre=info.update(0,0,0);
+       if(tmpre!=0){
+            String AppID=getAppIdUsingClient(clientname);
+            AppDataSize.get(AppID).addAndGet(tmpre);
+       }
+      }
+  }
   public void statisticInfoProcess(String DataXceiverServerID,List<DfsClientProcessInfo> dfsclients){
     //DfsClient Level FeedBack mechanism, in case of some free client waste the IO Quota allocated
-    double SumDataSize=0.0;
+    long SumDataSize=0;
     double IOSpeedAvg=0.0;
     double IOQuotaAvg=0.0;
     for(DfsClientProcessInfo info : dfsclients){
-        double datasize=info.getDataSize();
+        long datasize=(long)info.getDataSize();
         double quota=info.getIOQuota();
         double speed=info.getIOSpeed();
         double effect=speed/quota;
         String clientname=info.getClientname();
         if(DfsClientsFeedBackIOInfo.containsKey(clientname)){
-            DfsClientsFeedBackIOInfo.get(clientname).set(quota,effect);
+            long tmpre=DfsClientsFeedBackIOInfo.get(clientname).update(datasize,quota,effect);
+            if(tmpre!=0){
+                String AppID=getAppIdUsingClient(clientname);
+                AppDataSize.get(AppID).addAndGet(tmpre);
+            }
+            
         }else{
             //this DfsClient's has already ended
             continue;
@@ -1004,17 +1065,19 @@ public class NameNode implements NameNodeStatusMXBean {
         IOSpeedAvg+=speed*datasize;
         IOQuotaAvg+=quota*datasize;
     }
-    IOSpeedAvg/=SumDataSize;
-    IOQuotaAvg/=SumDataSize;
+    IOSpeedAvg/=(1.0*SumDataSize);
+    IOQuotaAvg/=(1.0*SumDataSize);
 
   }
-    
+   
   private synchronized void AppAddOneClient(String appId){
       if(AppClientnum.containsKey(appId)){
         Integer cur=AppClientnum.get(appId);
         AppClientnum.put(appId,cur+1);
       }else{
-        AppClientnum.put(appId,1);    
+        AppClientnum.put(appId,1);
+        //add the Same application  into "AppDataSize" 
+        AppDataSize.put(appId,new AtomicLong(0));
       }
   }
   private synchronized void AppMinusOneClient(String appId){
@@ -1025,6 +1088,8 @@ public class NameNode implements NameNodeStatusMXBean {
       int cur=AppClientnum.get(appId).intValue();
       if(cur==1){
         AppClientnum.remove(appId);
+        //Remove the same application from the "AppDataSize"
+        AppDataSize.remove(appId);
       }else{
         AppClientnum.put(appId,new Integer(cur-1));
       }
@@ -1038,6 +1103,25 @@ public class NameNode implements NameNodeStatusMXBean {
   private synchronized int getAppClientNum(String appId){
     return AppClientnum.get(appId).intValue(); 
   }
+  //Using FeedBack mechanism to compute IOQuota for 
+  public int ComputeQuotaFeedBack(String clientname){
+    String appid = getAppIdUsingClient(clientname);
+    int appquota=getAppQuotaUsingClient(clientname);
+    long appdatasize=AppDataSize.get(appid).get();
+    IOInfo info = DfsClientsFeedBackIOInfo.get(clientname);
+    long datasize = info.getDataSize();
+    LOG.info("Test_Info: ClientName:"+clientname+" ClientDatasize: "+String.valueOf(datasize)+" AppDataSize:"+String.valueOf(appdatasize));
+    if(datasize!=0){
+        return (int)(datasize*1.0/appdatasize*appquota);
+    }else{
+        int clientsnum=getAppClientNum(appid);
+        long tmpdatasize=appdatasize/clientsnum;
+        info.update(tmpdatasize,0,0);
+        AppDataSize.get(appid).addAndGet(tmpdatasize);
+        return appquota/clientsnum;
+
+    }
+  }
   public int ComputeQuota(String clientname){
       String appid=getAppIdUsingClient(clientname);
       return getAppQuotaUsingClient(clientname)/getAppClientNum(appid);
@@ -1046,7 +1130,7 @@ public class NameNode implements NameNodeStatusMXBean {
       AppAddOneClient(appId);
       DfsClientInfo info = new DfsClientInfo(userId,appId,appQuota);
       applicationRegistration.put(clientName,info);
-      DfsClientsFeedBackIOInfo.put(clientName,new IOInfo(0.0,0.0));
+      DfsClientsFeedBackIOInfo.put(clientName,new IOInfo()); //added for FeedBack mechanism
       return 0;
   }
 
@@ -1067,9 +1151,17 @@ public class NameNode implements NameNodeStatusMXBean {
   
   public synchronized int unregisterApplication(String clientName){
       DfsClientInfo info=applicationRegistration.get(clientName);
-      if(info!=null)AppMinusOneClient(info.getAppId());
+      if(info==null){
+          //in case two DfsClients have same names
+          return 0;
+      }
+      String appid=info.getAppId();
       applicationRegistration.remove(clientName);
-      DfsClientsFeedBackIOInfo.remove(clientName);
+      // AppDataSize minus the datasize of this dfsclient
+      long tmpdatasize=DfsClientsFeedBackIOInfo.get(clientName).getDataSize();
+      DfsClientsFeedBackIOInfo.remove(clientName);   //added for FeedBack mechanism
+      AppDataSize.get(appid).addAndGet(-1*tmpdatasize);
+      AppMinusOneClient(appid);
       //nodesMap.remove(clientName);
       return 0;
   }
@@ -1078,12 +1170,10 @@ public class NameNode implements NameNodeStatusMXBean {
       streamMap.put(stream, clientName);
       return 0;
   }
-  
   public synchronized int unregisterStream(String stream){
       streamMap.remove(stream);
       return 0;
   }
-
   public synchronized int registerNodes(String clientName, List<String> nodes){
       nodesMap.put(clientName,nodes);
        for(Map.Entry<String,List<String>> m : nodesMap.entrySet()){

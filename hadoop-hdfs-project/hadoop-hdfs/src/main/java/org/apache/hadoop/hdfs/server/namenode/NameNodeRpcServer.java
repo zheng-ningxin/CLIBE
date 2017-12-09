@@ -1445,38 +1445,16 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         dnCacheCapacity, dnCacheUsed, xceiverCount, xmitsInProgress,
         failedVolumes, volumeFailureSummary, requestFullBlockReportLease);
   }
+  public void statisticReportTest(String DataXceiverServerID,List<DfsClientProcessInfo> dfsclients){
+    //LOG.info("Test_Statistic:"+DataXceiverServerID+"  "+formatTime(monotonicNow()));
+    for(DfsClientProcessInfo info: dfsclients){
+        LOG.info("Test_Statistic "+String.valueOf(info.getClientname())+"  "+String.valueOf(info.getDataSize())+"  "+String.valueOf(info.getIOQuota()));
+    }
+  }
   @Override //DatanodeProtocol
   public void statisticReport(String DataXceiverServerID,List<DfsClientProcessInfo> dfsclients) throws IOException{
     nn.statisticInfoProcess(DataXceiverServerID,dfsclients);
-    /*
-    Long timenow=new Long(monotonicNow());
-    //FeedbackLastUpdated.put(DataXceiverServerID,timenow);
-    //DataNode Level feed back mechanism
-    double SumDataSize=0.0;
-    double IOSpeedAvg=0.0;
-    double IOQuotaAvg=0.0;
-    for(DfsClientProcessInfo info:dfsclients){
-        //DfsClient Level feed back mechanism
-        SumDataSize+=info.getDataSize();
-        double quota=info.getIOQuota();
-        double speed=info.getIOSpeed();
-        double effect=speed/quota;
-        String clientname=info.getClientname();
-        
-        if(DfsClientsFeedBackIOInfo.containsKey(clientname)){
-            DfsClientsFeedBackIOInfo.get(clientname).set(quota,effect);
-        }else{
-            //The DfsClient is finished do nothing
-        }
-        IOSpeedAvg+=speed*info.getDataSize();
-        IOQuotaAvg+=quota*info.getDataSize();
-        //LOG.info("Test_Info:From "+DataXceiverServerID+"  "+info.getClientname()+" "+info.getIOSpeed());
-    }
-    IOQuotaAvg/=SumDataSize;
-    IOSpeedAvg/=SumDataSize;
-    //Here we define a parameter Effect to describe the validity of the allocatedIOQuota as : IOSpeed/IOQuota 
-    double Effect=IOSpeedAvg/IOQuotaAvg;
-    */
+    statisticReportTest(DataXceiverServerID,dfsclients);
   }
 
   /**
@@ -1504,7 +1482,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     long[] quotas= new long[dfsclients.size()];
     int pos=0;
     for(String clientname: dfsclients)
-        quotas[pos++]=nn.ComputeQuota(clientname);
+        //quotas[pos++]=nn.ComputeQuota(clientname);
+        try{
+            quotas[pos]=nn.ComputeQuotaFeedBack(clientname);
+        }catch(Exception ex){
+            LOG.warn("Exception in NameNodeRpcServer:ComputeQuota"+ex);
+            quotas[pos]=0;
+        }
+        pos++;
     return quotas;
   }
 

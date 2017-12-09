@@ -64,7 +64,7 @@ class DataXceiverServer implements Runnable {
   //IORequests ---Batching-->IORequestList
   private IOBandwidthManagerDatanodeSide IOBandwidthManager;
   private FeedBackManagerDatanodeSide FeedBackManager;
-  ConcurrentHashMap<String,DfsClientProcessInfo> statisticInfo=new ConcurrentHashMap<String,DfsClientProcessInfo>(1000);
+  ConcurrentHashMap<String,DfsClientProcessInfo> statisticInfo=new ConcurrentHashMap<String,DfsClientProcessInfo>(10000);
   private String DataXceiverServerID;
 
   private final Configuration conf;
@@ -267,14 +267,17 @@ class DataXceiverServer implements Runnable {
   } 
   public void updateAfterRequestFinished(String clientname,double ioquota,double iospeed,double datasize ){
     //Using concurrent map
-    LOG.info("Test_Info:"+clientname+" Quota:"+ String.valueOf(ioquota) 
-            +" IOSpeed:"+String.valueOf(iospeed)+" DataSize:"+String.valueOf(datasize));
+    //LOG.info("Test_Info:"+clientname+" Quota:"+ String.valueOf(ioquota) 
+    //        +" IOSpeed:"+String.valueOf(iospeed)+" DataSize:"+String.valueOf(datasize));
     if(statisticInfo.containsKey(clientname)){
-        statisticInfo.get(clientname).update(ioquota,iospeed,datasize);     
+        statisticInfo.get(clientname).update(ioquota,iospeed,datasize);
+        DfsClientProcessInfo info=statisticInfo.get(clientname);
+        LOG.info("Test_Info: "+clientname+" DataSize:"+String.valueOf(info.getDataSize())+" IOSpeed:"+String.valueOf(info.getIOSpeed()));
     }else{
         DfsClientProcessInfo newclient=new DfsClientProcessInfo(clientname);
         newclient.update(ioquota,iospeed,datasize);
         statisticInfo.put(clientname,newclient);
+        //LOG.info("Test_Info: "+clientname+" DataSize:"+String.valueOf(info.getDataSize())+" IOSpeed:"+String.valueOf(info.getIOSpeed()));
     }
   }
 

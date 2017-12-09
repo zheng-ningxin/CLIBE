@@ -43,7 +43,7 @@ public class DfsClientProcessInfo{
         this.IOSpeedAverage=iospeed;
         this.DataSize=datasize;
     }
-    public void update(double quota,double iospeed,double datasize){
+    public synchronized void update(double quota,double iospeed,double datasize){
         double time=datasize*1.0/iospeed+DataSize/IOSpeedAverage;
         IOSpeedAverage=(datasize+DataSize)/time;
         //Quota maybe zero which means that infinite IO Bandwidth quota
@@ -66,16 +66,16 @@ public class DfsClientProcessInfo{
     public double getDataSize(){
         return DataSize;
     }
-    public void setClientname(String name){
+    public synchronized void setClientname(String name){
         this.clientname=name;
     }
-    public void setIOQuota(double quota){
+    public synchronized void setIOQuota(double quota){
         this.IOQuotaAverage=quota;
     }
-    public void setIOSpeed(double speed){
+    public synchronized void setIOSpeed(double speed){
         this.IOSpeedAverage=speed;
     }
-    public void setDataSize(double datasize){
+    public synchronized void setDataSize(double datasize){
         this.DataSize=datasize;
     }
 
