@@ -196,7 +196,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
         throw ProtobufHelper.getRemoteException(se);
     }
   }
-
+ 
   @Override
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration registration,
       StorageReport[] reports, long cacheCapacity, long cacheUsed,

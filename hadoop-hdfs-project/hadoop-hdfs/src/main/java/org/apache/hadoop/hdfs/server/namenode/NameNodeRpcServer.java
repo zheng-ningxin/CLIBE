@@ -1482,9 +1482,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     long[] quotas= new long[dfsclients.size()];
     int pos=0;
     for(String clientname: dfsclients)
-        //quotas[pos++]=nn.ComputeQuota(clientname);
+        //quotas[pos++]=nn.ComputeQuota(DataXceiverServerID,clientname);
         try{
-            quotas[pos]=nn.ComputeQuotaFeedBack(clientname);
+            quotas[pos]=nn.ComputeQuotaFeedBack(DataXceiverServerID,clientname);
         }catch(Exception ex){
             LOG.warn("Exception in NameNodeRpcServer:ComputeQuota"+ex);
             quotas[pos]=0;

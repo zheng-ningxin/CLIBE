@@ -128,6 +128,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     String DataXceiverServerID=report.getDataxceiverserverid();
     List<DfsClientIOInfo> tmplist=report.getDfsclientsioinfoList();
     List<DfsClientProcessInfo> dfsclients=new ArrayList();
+    if(tmplist!=null)
     for(DfsClientIOInfo info : tmplist){
         DfsClientProcessInfo tmp=new DfsClientProcessInfo(info.getClientname(),
                 info.getIoquota(),
@@ -140,7 +141,8 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     } catch(IOException e){
         throw new ServiceException(e);
     }
-    return null;
+    StatisticInfoResponseProto.Builder builder=StatisticInfoResponseProto.newBuilder();
+    return builder.build();
   }
   @Override
   public IOBandwidthQuotaResponseProto fetchIOBandwidthQuotaList(

@@ -185,6 +185,7 @@ class DataXceiverServer implements Runnable {
         LOG.warn("Exception happend in DataXceiverServer startFeedBackManagerDatanodeSide "+ex);
     }  
   }
+
   public void sendStatisticReport(){
     List<DfsClientProcessInfo> dfsclients=new ArrayList<DfsClientProcessInfo>();
     synchronized(statisticInfo){
@@ -196,7 +197,8 @@ class DataXceiverServer implements Runnable {
         statisticInfo.clear();
     }
     try{
-        bpNamenode.statisticReport(this.DataXceiverServerID,dfsclients);  
+        if(bpNamenode!=null)
+            bpNamenode.statisticReport(this.DataXceiverServerID,dfsclients);  
     } catch(IOException ie){
         LOG.warn("Exception in sendStatisticReport of DataXceiverServer "+ie);
     }
@@ -285,8 +287,8 @@ class DataXceiverServer implements Runnable {
   public void run() {
     Peer peer = null;
     //startIOBandwidthManagerDatanodeSide();
-    startFeedBackManagerDatanodeSide();
     GetRpcHandlerForIOControl();
+    startFeedBackManagerDatanodeSide();
     while (datanode.shouldRun && !datanode.shutdownForUpgrade) {
       try {
         peer = peerServer.accept();
