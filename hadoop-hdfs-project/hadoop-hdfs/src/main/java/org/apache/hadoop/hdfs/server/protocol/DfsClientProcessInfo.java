@@ -48,9 +48,10 @@ public class DfsClientProcessInfo{
         IOSpeedAverage=(datasize+DataSize)/time;
         //Quota maybe zero which means that infinite IO Bandwidth quota
         if(quota< 1e-9){
-            quota=1000000000.0;
+            quota=100000000.0;
         }
         IOQuotaAverage=(DataSize+datasize)/(DataSize/IOQuotaAverage+datasize/quota);
+        //IOQuotaAverage=(DataSize*IOQuotaAverage+datasize*quota)/(DataSize+datasize);
         DataSize+=datasize;
         
     }

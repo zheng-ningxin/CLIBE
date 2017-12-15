@@ -1446,7 +1446,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         failedVolumes, volumeFailureSummary, requestFullBlockReportLease);
   }
   public void statisticReportTest(String DataXceiverServerID,List<DfsClientProcessInfo> dfsclients){
-    //LOG.info("Test_Statistic:"+DataXceiverServerID+"  "+formatTime(monotonicNow()));
     for(DfsClientProcessInfo info: dfsclients){
         LOG.info("Test_Statistic "+String.valueOf(info.getClientname())+"  "+String.valueOf(info.getDataSize())+"  "+String.valueOf(info.getIOQuota()));
     }
@@ -1454,7 +1453,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override //DatanodeProtocol
   public void statisticReport(String DataXceiverServerID,List<DfsClientProcessInfo> dfsclients) throws IOException{
     nn.statisticInfoProcess(DataXceiverServerID,dfsclients);
-    statisticReportTest(DataXceiverServerID,dfsclients);
+    //statisticReportTest(DataXceiverServerID,dfsclients);
   }
 
   /**
@@ -1484,7 +1483,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     for(String clientname: dfsclients)
         //quotas[pos++]=nn.ComputeQuota(DataXceiverServerID,clientname);
         try{
-            quotas[pos]=nn.ComputeQuotaFeedBack(DataXceiverServerID,clientname);
+            quotas[pos]=nn.ComputeQuotaNodeFeedback(DataXceiverServerID,clientname);
+            //LOG.info("Test_Info: DataNode:"+DataXceiverServerID+"  "+clientname+"  "+String.valueOf(quotas[pos])+"MB/s");
         }catch(Exception ex){
             LOG.warn("Exception in NameNodeRpcServer:ComputeQuota"+ex);
             quotas[pos]=0;

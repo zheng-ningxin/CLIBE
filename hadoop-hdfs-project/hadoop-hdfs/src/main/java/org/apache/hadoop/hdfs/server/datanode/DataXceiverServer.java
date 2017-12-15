@@ -269,17 +269,19 @@ class DataXceiverServer implements Runnable {
   } 
   public void updateAfterRequestFinished(String clientname,double ioquota,double iospeed,double datasize ){
     //Using concurrent map
-    //LOG.info("Test_Info:"+clientname+" Quota:"+ String.valueOf(ioquota) 
-    //        +" IOSpeed:"+String.valueOf(iospeed)+" DataSize:"+String.valueOf(datasize));
+    //change quote from Byte/s unit to MB/s Unit
+    ioquota/=(1024.0*1024.0);
     if(statisticInfo.containsKey(clientname)){
         statisticInfo.get(clientname).update(ioquota,iospeed,datasize);
         DfsClientProcessInfo info=statisticInfo.get(clientname);
-        LOG.info("Test_Info: "+clientname+" DataSize:"+String.valueOf(info.getDataSize())+" IOSpeed:"+String.valueOf(info.getIOSpeed()));
+        LOG.info("Test_Info: "+clientname+" ioquota:"+String.valueOf(ioquota)+" iospeed:"+String.valueOf(iospeed)+" datasize:"+String.valueOf(datasize)+
+                " DataSize:"+String.valueOf(info.getDataSize())+" IOSpeed:"+String.valueOf(info.getIOSpeed())+" Quota:"+String.valueOf(info.getIOQuota()));
     }else{
         DfsClientProcessInfo newclient=new DfsClientProcessInfo(clientname);
         newclient.update(ioquota,iospeed,datasize);
         statisticInfo.put(clientname,newclient);
-        //LOG.info("Test_Info: "+clientname+" DataSize:"+String.valueOf(info.getDataSize())+" IOSpeed:"+String.valueOf(info.getIOSpeed()));
+        LOG.info("Test_Info:First "+clientname+" DataSize:"+String.valueOf(newclient.getDataSize())+" IOSpeed:"+String.valueOf(newclient.getIOSpeed())+" Quota:"+
+                String.valueOf(ioquota));
     }
   }
 

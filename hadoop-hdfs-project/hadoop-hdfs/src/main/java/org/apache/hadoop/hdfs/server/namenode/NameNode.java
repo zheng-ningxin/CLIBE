@@ -108,6 +108,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
+import java.lang.Math;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
@@ -195,8 +196,8 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 
 @InterfaceAudience.Private
 public class NameNode implements NameNodeStatusMXBean {
-  public static final long FeedBackPeriodDuration=2*1000;
-  public static final double SlowNodeThresHold=0.5;
+  public static final long FeedBackPeriodDuration=30*1000;
+  public static final double SlowNodeThresHold=0.8;
   class DfsClientInfo{
     private String UserId;
     private String AppId;
@@ -823,9 +824,12 @@ public class NameNode implements NameNodeStatusMXBean {
     startCommonServices(conf);
     startMetricsLogger(conf);
     //added for FeedBack mechanism
+    /*
+     added for DfsClient level feed backmechanism
     FeedBackManager= new FeedBackManagerNamenodeSide(this);
     Thread FeedBackManagerThread= new Thread(FeedBackManager);
     FeedBackManagerThread.start();
+    */
   }
 
   /**
@@ -1049,12 +1053,15 @@ public class NameNode implements NameNodeStatusMXBean {
     long SumDataSize=0;
     double IOSpeedAvg=0.0;
     double IOQuotaAvg=0.0;
+    double Effect=1.0;
     for(DfsClientProcessInfo info : dfsclients){
         long datasize=(long)info.getDataSize();
         double quota=info.getIOQuota();
         double speed=info.getIOSpeed();
         double effect=speed/quota;
         String clientname=info.getClientname();
+        /*
+         * added for DfsClient level feedback mechanism
         if(DfsClientsFeedBackIOInfo.containsKey(clientname)){
             long tmpre=DfsClientsFeedBackIOInfo.get(clientname).update(datasize,quota,effect);
             if(tmpre!=0){
@@ -1065,19 +1072,27 @@ public class NameNode implements NameNodeStatusMXBean {
         }else{
             //this DfsClient's has already ended
             continue;
-        }
+        }*/
         SumDataSize+=datasize;
         IOSpeedAvg+=speed*datasize;
         IOQuotaAvg+=quota*datasize;
+        LOG.info("Test_Statistic "+clientname+" clientquota:"+String.valueOf(quota)+" clientspeed:"+String.valueOf(speed)+" clientdatasize:"+String.valueOf(datasize));
     }
-    IOSpeedAvg/=(1.0*SumDataSize);
-    IOQuotaAvg/=(1.0*SumDataSize);
+    if(SumDataSize==0){
+        Effect=1.0;
+    }
+    else{
+        IOSpeedAvg/=(1.0*SumDataSize);
+        IOQuotaAvg/=(1.0*SumDataSize);
+        Effect=IOSpeedAvg/IOQuotaAvg;
+    }
     // Node level FeedBack mechanism
     if(DataNodesFeedBackIOInfo.containsKey(DataXceiverServerID)){
-        DataNodesFeedBackIOInfo.get(DataXceiverServerID).set(SumDataSize,IOQuotaAvg,IOSpeedAvg); 
+        DataNodesFeedBackIOInfo.get(DataXceiverServerID).set(SumDataSize,IOQuotaAvg,Effect); 
     }else{
-        DataNodesFeedBackIOInfo.put(DataXceiverServerID,new IOInfo(SumDataSize,IOQuotaAvg,IOSpeedAvg));
+        DataNodesFeedBackIOInfo.put(DataXceiverServerID,new IOInfo(SumDataSize,IOQuotaAvg,Effect));
     }
+    LOG.info("Test_Statistic "+DataXceiverServerID+" Quota"+String.valueOf(IOQuotaAvg)+" Speed:"+String.valueOf(IOSpeedAvg));
   }
    
   private synchronized void AppAddOneClient(String appId){
@@ -1115,15 +1130,18 @@ public class NameNode implements NameNodeStatusMXBean {
   private synchronized int getAppClientNum(String appId){
     return AppClientnum.get(appId).intValue(); 
   }
-  //Using FeedBack mechanism to compute IOQuota for 
-  public int ComputeQuotaFeedBack(String DataXceiverServerID , String clientname){
+  //Using FeedBack mechanism to compute IOQuota for
+  /*
+  public int ComputeQuotaBothFeedback(String DataXceiverServerID , String clientname){
+    
     //DfsClients level feedback mechanism  
     String appid = getAppIdUsingClient(clientname);
     int appquota=getAppQuotaUsingClient(clientname);
+    
     long appdatasize=AppDataSize.get(appid).get();
     IOInfo info = DfsClientsFeedBackIOInfo.get(clientname);
     long datasize = info.getDataSize();
-    LOG.info("Test_Info: ClientName:"+clientname+" ClientDatasize: "+String.valueOf(datasize)+" AppDataSize:"+String.valueOf(appdatasize));
+    //LOG.info("Test_Info: ClientName:"+clientname+" ClientDatasize: "+String.valueOf(datasize)+" AppDataSize:"+String.valueOf(appdatasize));
     int allocatedquota=0;
     int clientsnum=getAppClientNum(appid);
     if(datasize!=0){
@@ -1147,8 +1165,34 @@ public class NameNode implements NameNodeStatusMXBean {
         appquotaowed.addAndGet(-1*(tmp/clientsnum));
     }
     return allocatedquota;
+    
+  }*/
+  public int ComputeQuotaNodeFeedback(String DataXceiverServerID,String clientname){
+    String appid=getAppIdUsingClient(clientname);
+    int appquota=getAppQuotaUsingClient(clientname);
+    int clientsnum=getAppClientNum(appid);
+    int allocatedquota=appquota/clientsnum; 
+    //DataNode level feedback mechanism
+    IOInfo NodeIOInfo=DataNodesFeedBackIOInfo.get(DataXceiverServerID);
+    double nodeEffect=NodeIOInfo.getEffect();
+    double nodeIOSpeed=NodeIOInfo.getQuota()*nodeEffect;
+    AtomicInteger appquotaowed = AppQuotaOwed.get(appid);
+    if(nodeEffect<SlowNodeThresHold){
+        double tmpEffect=Math.min((nodeEffect+0.1),1.0);
+        int tmp1=(int)(allocatedquota*tmpEffect);
+        int tmp2=(int)(nodeIOSpeed*1.1);
+        int tmp=Math.min(tmp1,tmp2);
+        appquotaowed.addAndGet(allocatedquota-tmp);
+        allocatedquota=tmp;
+        LOG.info("Test_Info "+DataXceiverServerID+" NodeSpeed"+String.valueOf(nodeIOSpeed)+" IOQuota:"+String.valueOf(allocatedquota)+" NodeEffect:"+String.valueOf(nodeEffect));
+    }else{
+        int tmp=appquotaowed.get();
+        allocatedquota+=tmp/clientsnum;
+        appquotaowed.addAndGet(-1*(tmp/clientsnum));
+    }
+    return allocatedquota;
   }
-  public int ComputeQuota(String DataXceiverServerID,String clientname){
+  public int ComputeQuotaNoFeedback(String DataXceiverServerID,String clientname){
       String appid=getAppIdUsingClient(clientname);
       return getAppQuotaUsingClient(clientname)/getAppClientNum(appid);
   }
