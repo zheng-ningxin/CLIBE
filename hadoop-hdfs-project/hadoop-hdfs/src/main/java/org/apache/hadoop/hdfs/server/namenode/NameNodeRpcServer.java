@@ -1481,7 +1481,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     long[] quotas= new long[dfsclients.size()];
     int pos=0;
     for(String clientname: dfsclients)
-        //quotas[pos++]=nn.ComputeQuota(DataXceiverServerID,clientname);
+        //Feedback mechanism off
+        //quotas[pos++]=nn.ComputeQuotaNoFeedback(DataXceiverServerID,clientname);
+        
+        //Feedback mechanism on
         try{
             quotas[pos]=nn.ComputeQuotaNodeFeedback(DataXceiverServerID,clientname);
             //LOG.info("Test_Info: DataNode:"+DataXceiverServerID+"  "+clientname+"  "+String.valueOf(quotas[pos])+"MB/s");

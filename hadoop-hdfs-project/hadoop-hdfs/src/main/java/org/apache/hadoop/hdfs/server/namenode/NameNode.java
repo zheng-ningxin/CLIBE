@@ -237,9 +237,9 @@ public class NameNode implements NameNodeStatusMXBean {
         this.updatepoint=monotonicNow();
     }
     public IOInfo(){
-        this.datasize=0;
+        this.datasize=1;
         this.quota=0.0;
-        this.effect=0.0;
+        this.effect=1.0;
         this.updatepoint=monotonicNow();
     }
     public long getDataSize(){
@@ -257,8 +257,26 @@ public class NameNode implements NameNodeStatusMXBean {
         this.effect=effect;
         this.updatepoint=monotonicNow();
     }
+    public synchronized void NodeIOUpdate(long nodedatasize,double nodequota,double nodeeffect){
+        long timenow=monotonicNow();
+        if(timenow-updatepoint>=10*NameNode.FeedBackPeriodDuration){
+            set(nodedatasize,nodequota,nodeeffect);
+            updatepoint=timenow;
+        }else{
+            if(nodedatasize+this.datasize==0){
+                this.effect=1.0;
+                this.quota=0.0;
+            }else{
+                this.effect=(this.datasize*this.effect+nodedatasize*nodeeffect)/(this.datasize+nodedatasize);
+                this.quota=(this.datasize*this.quota+nodequota*nodedatasize)/(datasize+nodedatasize);
+                this.datasize+=nodedatasize;
+            }
+        }
+        LOG.info("Test_Statistic: LastDataSize:"+ String.valueOf(nodedatasize)+" LastQuota:"+String.valueOf(nodequota) +" Last Speed"+ String.valueOf(nodequota*nodeeffect) +
+                " AfterUpdate() datasize:"+String.valueOf(datasize)+" quota:"+String.valueOf(this.quota)+" effect:"+String.valueOf(this.effect));
+    }
     //return original_datasize - new_datasize
-    public synchronized long update(long datasize,double quota,double effect){
+    public synchronized long ClientIOUpdate(long datasize,double quota,double effect){
         //Using Datasize to decide the weight parameter of the next Feedback period
         long timenow=monotonicNow();
         //LOG.info("Test_Info: update operation now:"+String.valueOf(timenow)+" last:"+String.valueOf(updatepoint));
@@ -1041,7 +1059,7 @@ public class NameNode implements NameNodeStatusMXBean {
       for(Map.Entry<String,IOInfo> entry : DfsClientsFeedBackIOInfo.entrySet()){
        final String clientname=entry.getKey();
        final IOInfo info=entry.getValue();
-       long tmpre=info.update(0,0,0);
+       long tmpre=info.ClientIOUpdate(0,0.0,0.0);
        if(tmpre!=0){
             String AppID=getAppIdUsingClient(clientname);
             AppDataSize.get(AppID).addAndGet(tmpre);
@@ -1076,7 +1094,7 @@ public class NameNode implements NameNodeStatusMXBean {
         SumDataSize+=datasize;
         IOSpeedAvg+=speed*datasize;
         IOQuotaAvg+=quota*datasize;
-        LOG.info("Test_Statistic "+clientname+" clientquota:"+String.valueOf(quota)+" clientspeed:"+String.valueOf(speed)+" clientdatasize:"+String.valueOf(datasize));
+        //LOG.info("Test_Statistic "+clientname+" clientquota:"+String.valueOf(quota)+" clientspeed:"+String.valueOf(speed)+" clientdatasize:"+String.valueOf(datasize));
     }
     if(SumDataSize==0){
         Effect=1.0;
@@ -1088,11 +1106,11 @@ public class NameNode implements NameNodeStatusMXBean {
     }
     // Node level FeedBack mechanism
     if(DataNodesFeedBackIOInfo.containsKey(DataXceiverServerID)){
-        DataNodesFeedBackIOInfo.get(DataXceiverServerID).set(SumDataSize,IOQuotaAvg,Effect); 
+        DataNodesFeedBackIOInfo.get(DataXceiverServerID).NodeIOUpdate(SumDataSize,IOQuotaAvg,Effect); 
     }else{
         DataNodesFeedBackIOInfo.put(DataXceiverServerID,new IOInfo(SumDataSize,IOQuotaAvg,Effect));
     }
-    LOG.info("Test_Statistic "+DataXceiverServerID+" Quota"+String.valueOf(IOQuotaAvg)+" Speed:"+String.valueOf(IOSpeedAvg));
+    //LOG.info("Test_Statistic "+DataXceiverServerID+" Quota"+String.valueOf(IOQuotaAvg)+" Speed:"+String.valueOf(IOSpeedAvg));
   }
    
   private synchronized void AppAddOneClient(String appId){
@@ -1179,22 +1197,22 @@ public class NameNode implements NameNodeStatusMXBean {
     AtomicInteger appquotaowed = AppQuotaOwed.get(appid);
     if(nodeEffect<SlowNodeThresHold){
         double tmpEffect=Math.min((nodeEffect+0.1),1.0);
-        int tmp1=(int)(allocatedquota*tmpEffect);
-        int tmp2=(int)(nodeIOSpeed*1.1);
-        int tmp=Math.min(tmp1,tmp2);
+        int tmp=(int)(allocatedquota*tmpEffect);
         appquotaowed.addAndGet(allocatedquota-tmp);
         allocatedquota=tmp;
-        LOG.info("Test_Info "+DataXceiverServerID+" NodeSpeed"+String.valueOf(nodeIOSpeed)+" IOQuota:"+String.valueOf(allocatedquota)+" NodeEffect:"+String.valueOf(nodeEffect));
     }else{
         int tmp=appquotaowed.get();
         allocatedquota+=tmp/clientsnum;
         appquotaowed.addAndGet(-1*(tmp/clientsnum));
     }
+    LOG.info("Test_Info"+DataXceiverServerID+" IOQuota:"+String.valueOf(allocatedquota)+" NodeEffect:"+String.valueOf(nodeEffect));
     return allocatedquota;
   }
   public int ComputeQuotaNoFeedback(String DataXceiverServerID,String clientname){
       String appid=getAppIdUsingClient(clientname);
-      return getAppQuotaUsingClient(clientname)/getAppClientNum(appid);
+      int allocatedquota= getAppQuotaUsingClient(clientname)/getAppClientNum(appid);
+      LOG.info("Test_Info "+DataXceiverServerID+"  IOQuota:"+String.valueOf(allocatedquota));
+      return allocatedquota;
   }
   public synchronized int registerApplication(String userId, String clientName, String appId, int appQuota){
       AppAddOneClient(appId);
