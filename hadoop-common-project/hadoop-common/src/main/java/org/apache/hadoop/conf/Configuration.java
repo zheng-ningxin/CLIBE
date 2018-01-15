@@ -24,6 +24,8 @@ import java.io.BufferedInputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
+import java.io.PrintWriter;
+import java.io.FileWriter;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -184,6 +186,27 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Stable
 public class Configuration implements Iterable<Map.Entry<String,String>>,
                                       Writable {
+  /*public static void PrintToFile(String path,String content){
+	FileWriter fw=null;
+	try{    	
+		File f =new File(path);
+		fw=new FileWriter(f,true);
+	}catch(IOException ioe){
+		ioe.printStackTrace();
+	}
+	PrintWriter pw = new PrintWriter(fw);
+	pw.println(content);
+	pw.flush();
+	try {
+		fw.flush();
+		pw.close();
+		fw.close();
+	} catch (IOException e) {
+		e.printStackTrace();
+	}
+
+   }*/
+
   private static final Log LOG =
     LogFactory.getLog(Configuration.class);
 

@@ -257,7 +257,7 @@ public class NameNode implements NameNodeStatusMXBean {
         this.effect=effect;
         this.updatepoint=monotonicNow();
     }
-    public synchronized void NodeIOUpdate(long nodedatasize,double nodequota,double nodeeffect){
+    public synchronized void NodeIOUpdate(String DataXceiverServerID,long nodedatasize,double nodequota,double nodeeffect){
         long timenow=monotonicNow();
         if(timenow-updatepoint>=10*NameNode.FeedBackPeriodDuration){
             set(nodedatasize,nodequota,nodeeffect);
@@ -272,7 +272,7 @@ public class NameNode implements NameNodeStatusMXBean {
                 this.datasize+=nodedatasize;
             }
         }
-        LOG.info("Test_Statistic: LastDataSize:"+ String.valueOf(nodedatasize)+" LastQuota:"+String.valueOf(nodequota) +" Last Speed"+ String.valueOf(nodequota*nodeeffect) +
+        LOG.info("Test_Statistic:"+DataXceiverServerID+" LastDataSize:"+ String.valueOf(nodedatasize)+" LastQuota:"+String.valueOf(nodequota) +" Last Speed"+ String.valueOf(nodequota*nodeeffect) +
                 " AfterUpdate() datasize:"+String.valueOf(datasize)+" quota:"+String.valueOf(this.quota)+" effect:"+String.valueOf(this.effect));
     }
     //return original_datasize - new_datasize
@@ -1106,7 +1106,7 @@ public class NameNode implements NameNodeStatusMXBean {
     }
     // Node level FeedBack mechanism
     if(DataNodesFeedBackIOInfo.containsKey(DataXceiverServerID)){
-        DataNodesFeedBackIOInfo.get(DataXceiverServerID).NodeIOUpdate(SumDataSize,IOQuotaAvg,Effect); 
+        DataNodesFeedBackIOInfo.get(DataXceiverServerID).NodeIOUpdate(DataXceiverServerID,SumDataSize,IOQuotaAvg,Effect); 
     }else{
         DataNodesFeedBackIOInfo.put(DataXceiverServerID,new IOInfo(SumDataSize,IOQuotaAvg,Effect));
     }
@@ -1209,9 +1209,10 @@ public class NameNode implements NameNodeStatusMXBean {
     return allocatedquota;
   }
   public int ComputeQuotaNoFeedback(String DataXceiverServerID,String clientname){
+      LOG.info("Test_Info:In ComputeQuotaNoFeedback");
       String appid=getAppIdUsingClient(clientname);
       int allocatedquota= getAppQuotaUsingClient(clientname)/getAppClientNum(appid);
-      LOG.info("Test_Info "+DataXceiverServerID+"  IOQuota:"+String.valueOf(allocatedquota));
+      LOG.info("Test_Info Nofeedback"+DataXceiverServerID+"  IOQuota:"+String.valueOf(allocatedquota));
       return allocatedquota;
   }
   public synchronized int registerApplication(String userId, String clientName, String appId, int appQuota){

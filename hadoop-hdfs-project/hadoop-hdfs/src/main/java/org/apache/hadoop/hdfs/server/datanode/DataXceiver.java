@@ -563,12 +563,13 @@ class DataXceiver extends Receiver implements Runnable {
     DataOutputStream out = getBufferedOutputStream();
     checkAccess(out, true, block, blockToken,
         Op.READ_BLOCK, BlockTokenIdentifier.AccessMode.READ);
-
+    boolean isinfinite=false;
     //Get the IOBandwidth Quota 
     long IOQuota=0;
     IOQuota = dataXceiverServer.getIOBandwidthQuotaUsingDfsclient(clientName);
     if(IOQuota <0){
         IOQuota=0;
+        isinfinite=true;
         //LOG.warn("IOBandwidth Quota allocated is lower than zero!!\n");
     }
     DataTransferThrottler IOthrottler=null;
@@ -633,9 +634,10 @@ class DataXceiver extends Receiver implements Runnable {
       datanode.metrics.incrTotalReadTime(duration);
       //update statistic information
       //duration in milliseconds
-      double IOSpeed=length/1024.0/1024*1000.0/duration;
-      dataXceiverServer.updateAfterRequestFinished(clientName,1.0*IOQuota,IOSpeed,length/1024/1024*1.0);
-    
+      if(!isinfinite){
+        double IOSpeed=length/1024.0/1024*1000.0/duration;
+        dataXceiverServer.updateAfterRequestFinished(clientName,1.0*IOQuota,IOSpeed,length/1024/1024*1.0);
+      }       
     
     } catch ( SocketException ignored ) {
       if (LOG.isTraceEnabled()) {
@@ -682,12 +684,14 @@ class DataXceiver extends Receiver implements Runnable {
       final boolean pinning,
       final boolean[] targetPinnings) throws IOException {
     
+    boolean infinite=false;
     long IOQuota=0;
     if(clientname.length()>0){
         IOQuota = dataXceiverServer.getIOBandwidthQuotaUsingDfsclient(clientname);
     }
     if(IOQuota <=0){
         IOQuota=0;
+        infinite=true;
         //LOG.warn("IOBandwidth Quota allocated is lower than zero!!\n");
     }
     DataTransferThrottler IOthrottler=null;
@@ -716,8 +720,8 @@ class DataXceiver extends Receiver implements Runnable {
       throw new IOException(stage + " does not support multiple targets "
           + Arrays.asList(targets));
     }
-    //LOG.info("Test_Info:Clientname: "+clientname+" IOQuota:"+String.valueOf(IOQuota)+" pipelineSize:"+String.valueOf(pipelineSize)+" Targets left:" 
-            //+String.valueOf(targets.length)+" IsClient:"+String.valueOf(isClient)+"\n");
+    LOG.info("Test_Info:Clientname: "+clientname+" IOQuota:"+String.valueOf(IOQuota)+" pipelineSize:"+String.valueOf(pipelineSize)+" Targets left:" 
+            +String.valueOf(targets.length)+" IsClient:"+String.valueOf(isClient)+"\n");
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("opWriteBlock: stage=" + stage + ", clientname=" + clientname 
@@ -938,9 +942,11 @@ class DataXceiver extends Receiver implements Runnable {
     //update statistic information
     long duration=Time.monotonicNow()-beginWrite;
     //duration in milliseconds
-    double length=block.getNumBytes()/1024.0/1024;    //Use MB as the unit
-    double IOSpeed=length*1000.0/duration;
-    dataXceiverServer.updateAfterRequestFinished(clientname,1.0*IOQuota,IOSpeed,length*1.0);
+    if(!infinite){
+        double length=block.getNumBytes()/1024.0/1024;    //Use MB as the unit
+        double IOSpeed=length*1000.0/duration;
+        dataXceiverServer.updateAfterRequestFinished(clientname,1.0*IOQuota,IOSpeed,length*1.0);
+    }
 
     //update metrics
     datanode.getMetrics().addWriteBlockOp(elapsed());

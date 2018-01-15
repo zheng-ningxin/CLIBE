@@ -142,9 +142,11 @@ public class DistributedFileSystem extends FileSystem {
 
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
+    System.out.println("Test_New:In dfs initialize uri:"+uri.toString()+" conf:"+conf.toString());
+
     super.initialize(uri, conf);
     setConf(conf);
-
+    
     String host = uri.getHost();
     if (host == null) {
       throw new IOException("Incomplete HDFS URI, no host: "+ uri);

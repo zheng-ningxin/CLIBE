@@ -161,6 +161,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public static FileSystem get(final URI uri, final Configuration conf,
         final String user) throws IOException, InterruptedException {
+    LOG.info("Test_New: "+uri.toString()+" "+conf.toString());
     String ticketCachePath =
       conf.get(CommonConfigurationKeys.KERBEROS_TICKET_CACHE_PATH);
     UserGroupInformation ugi =
@@ -178,6 +179,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param conf the configuration to use
    */
   public static FileSystem get(Configuration conf) throws IOException {
+    //LOG.info("Test_New: "+conf.toString());
+    System.out.println("Test_New: In FileSystem get :Conf="+conf.toString());
     return get(getDefaultUri(conf), conf);
   }
   

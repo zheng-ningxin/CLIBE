@@ -241,7 +241,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   protected final InetSocketAddress clientRpcAddress;
   
   private final String minimumDataNodeVersion;
-
+  private final boolean FeedbackON;
   public NameNodeRpcServer(Configuration conf, NameNode nn)
       throws IOException {
     this.nn = nn;
@@ -501,6 +501,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (lifelineRpcServer != null) {
       lifelineRpcServer.setTracer(nn.tracer);
     }
+    //Check if Feedback mechanism on
+    FeedbackON=conf.getBoolean("fs.namenode.feedback",false);
+    LOG.info("Test_Info: Feedback mechanism on: "+ String.valueOf(FeedbackON));
   }
 
   /** Allow access to the lifeline RPC server for testing */
@@ -1480,14 +1483,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public long[] ComputeQuota(String DataXceiverServerID , List<String> dfsclients) throws IOException{
     long[] quotas= new long[dfsclients.size()];
     int pos=0;
-    for(String clientname: dfsclients)
-        //Feedback mechanism off
-        //quotas[pos++]=nn.ComputeQuotaNoFeedback(DataXceiverServerID,clientname);
-        
-        //Feedback mechanism on
+    LOG.info("Test_Info: In ComputeQuota!");
+    for(String clientname: dfsclients)    
         try{
-            quotas[pos]=nn.ComputeQuotaNodeFeedback(DataXceiverServerID,clientname);
-            //LOG.info("Test_Info: DataNode:"+DataXceiverServerID+"  "+clientname+"  "+String.valueOf(quotas[pos])+"MB/s");
+            if(FeedbackON)
+                quotas[pos]=nn.ComputeQuotaNodeFeedback(DataXceiverServerID,clientname);
+            else
+                quotas[pos]=nn.ComputeQuotaNoFeedback(DataXceiverServerID,clientname);
+            LOG.info("Test_Info: DataNode:"+DataXceiverServerID+"  "+clientname+"  "+String.valueOf(quotas[pos])+"MB/s");
         }catch(Exception ex){
             LOG.warn("Exception in NameNodeRpcServer:ComputeQuota"+ex);
             quotas[pos]=0;
@@ -1495,7 +1498,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         pos++;
     return quotas;
   }
-
+ 
   @Override // DatanodeProtocol
   public DatanodeCommand blockReport(final DatanodeRegistration nodeReg,
         String poolId, final StorageBlockReport[] reports,

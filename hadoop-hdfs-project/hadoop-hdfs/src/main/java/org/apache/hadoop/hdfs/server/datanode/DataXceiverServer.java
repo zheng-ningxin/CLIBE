@@ -195,7 +195,7 @@ class DataXceiverServer implements Runnable {
             dfsclients.add(entry.getValue());
         }
         statisticInfo.clear();
-        LOG.info("Test_Info Map cleared");
+        //LOG.info("Test_Info Map cleared");
     }
     try{
         if(bpNamenode!=null)
