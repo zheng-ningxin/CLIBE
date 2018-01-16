@@ -720,8 +720,8 @@ class DataXceiver extends Receiver implements Runnable {
       throw new IOException(stage + " does not support multiple targets "
           + Arrays.asList(targets));
     }
-    LOG.info("Test_Info:Clientname: "+clientname+" IOQuota:"+String.valueOf(IOQuota)+" pipelineSize:"+String.valueOf(pipelineSize)+" Targets left:" 
-            +String.valueOf(targets.length)+" IsClient:"+String.valueOf(isClient)+"\n");
+    //LOG.info("Test_Info:Clientname: "+clientname+" IOQuota:"+String.valueOf(IOQuota)+" pipelineSize:"+String.valueOf(pipelineSize)+" Targets left:" 
+    //        +String.valueOf(targets.length)+" IsClient:"+String.valueOf(isClient)+"\n");
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("opWriteBlock: stage=" + stage + ", clientname=" + clientname 
@@ -773,7 +773,7 @@ class DataXceiver extends Receiver implements Runnable {
       }
       storageUuid = replica.getStorageUuid();
       isOnTransientStorage = replica.isOnTransientStorage();
-
+ 
       //
       // Connect to downstream machine, if appropriate
       //

@@ -268,7 +268,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public DFSClient(InetSocketAddress address, Configuration conf)
       throws IOException {
     this(DFSUtilClient.getNNUri(address), conf);
-    System.out.printf("Test_New: in constructor of DFSClient"+ address.toString()+"\n");
+    //System.out.println("Test_New: in constructor of DFSClient"+ address.toString()+"\n");
   }
 
   /**
@@ -351,7 +351,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       this.dtService = proxyInfo.getDelegationTokenService();
       this.namenode = proxyInfo.getProxy();
     }
-    System.out.printf("Test_New: In constructor of DFSClient\n");
+    //System.out.printf("Test_New: In constructor of DFSClient\n");
     String AppId = conf.get("IOcontrol.AppId","DefaultAppId");
     int AppQuota = conf.getInt("IOcontrol.AppQuota",0);
     String StringQuota =conf.get("IOcontrol.AppQuota","0");
@@ -363,8 +363,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     //LOG.info("dfsclient "+AppId);
     //LOG.info("dfsclient "+AppQuota);
     // register
-    System.out.printf("Test_New: In constructor of the DFSClient AppId:"+AppId+ " Quota:"+String.valueOf(AppQuota)+"\n"); 
-    System.out.printf("Test_New: In constructor of the DFSClient AppId:"+ugi.toString()+"\n"); 
+    //System.out.println("Test_New: In constructor of the DFSClient AppId:"+AppId+ " Quota:"+String.valueOf(AppQuota)+"\n"); 
+    //System.out.println("Test_New: In constructor of the DFSClient AppId:"+ugi.toString()+"\n"); 
     try{
         this.namenode.registerApplication(ugi.toString(),clientName,AppId,AppQuota);
     }catch(Exception e){

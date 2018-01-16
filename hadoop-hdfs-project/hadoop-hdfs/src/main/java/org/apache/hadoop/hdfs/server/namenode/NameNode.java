@@ -1205,14 +1205,13 @@ public class NameNode implements NameNodeStatusMXBean {
         allocatedquota+=tmp/clientsnum;
         appquotaowed.addAndGet(-1*(tmp/clientsnum));
     }
-    LOG.info("Test_Info"+DataXceiverServerID+" IOQuota:"+String.valueOf(allocatedquota)+" NodeEffect:"+String.valueOf(nodeEffect));
+    //LOG.info("Test_Info"+DataXceiverServerID+" IOQuota:"+String.valueOf(allocatedquota)+" NodeEffect:"+String.valueOf(nodeEffect));
     return allocatedquota;
   }
   public int ComputeQuotaNoFeedback(String DataXceiverServerID,String clientname){
-      LOG.info("Test_Info:In ComputeQuotaNoFeedback");
       String appid=getAppIdUsingClient(clientname);
       int allocatedquota= getAppQuotaUsingClient(clientname)/getAppClientNum(appid);
-      LOG.info("Test_Info Nofeedback"+DataXceiverServerID+"  IOQuota:"+String.valueOf(allocatedquota));
+      //LOG.info("Test_Info Nofeedback"+DataXceiverServerID+"  IOQuota:"+String.valueOf(allocatedquota));
       return allocatedquota;
   }
   public synchronized int registerApplication(String userId, String clientName, String appId, int appQuota){

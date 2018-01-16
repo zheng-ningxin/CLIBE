@@ -1483,7 +1483,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public long[] ComputeQuota(String DataXceiverServerID , List<String> dfsclients) throws IOException{
     long[] quotas= new long[dfsclients.size()];
     int pos=0;
-    LOG.info("Test_Info: In ComputeQuota!");
     for(String clientname: dfsclients)    
         try{
             if(FeedbackON)

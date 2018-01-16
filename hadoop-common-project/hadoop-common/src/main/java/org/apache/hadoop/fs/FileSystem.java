@@ -180,7 +180,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public static FileSystem get(Configuration conf) throws IOException {
     //LOG.info("Test_New: "+conf.toString());
-    System.out.println("Test_New: In FileSystem get :Conf="+conf.toString());
+    //System.out.println("Test_New: In FileSystem get :Conf="+conf.toString());
     return get(getDefaultUri(conf), conf);
   }
   
