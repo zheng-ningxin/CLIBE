@@ -44,15 +44,16 @@ public class DfsClientProcessInfo{
         this.DataSize=datasize;
     }
     public synchronized void update(double quota,double iospeed,double datasize){
+        DataSize+=datasize;
         double time=datasize*1.0/iospeed+DataSize/IOSpeedAverage;
         IOSpeedAverage=(datasize+DataSize)/time;
-        //Quota maybe zero which means that infinite IO Bandwidth quota
         if(quota< 1e-9){
-            quota=100000000.0;
+            return ;
         }
+        //Quota maybe zero which means that infinite IO Bandwidth quota
         IOQuotaAverage=(DataSize+datasize)/(DataSize/IOQuotaAverage+datasize/quota);
         //IOQuotaAverage=(DataSize*IOQuotaAverage+datasize*quota)/(DataSize+datasize);
-        DataSize+=datasize;
+
         
     }
     public String getClientname(){

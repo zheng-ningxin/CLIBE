@@ -1486,10 +1486,11 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     for(String clientname: dfsclients)    
         try{
             if(FeedbackON)
-                quotas[pos]=nn.ComputeQuotaNodeFeedback(DataXceiverServerID,clientname);
+                //quotas[pos]=nn.ComputeQuotaNodeFeedback(DataXceiverServerID,clientname);
+                quotas[pos]=nn.ComputeQuotaNodeAppFeedback(DataXceiverServerID,clientname);
             else
                 quotas[pos]=nn.ComputeQuotaNoFeedback(DataXceiverServerID,clientname);
-            LOG.info("Test_Info: DataNode:"+DataXceiverServerID+"  "+clientname+"  "+String.valueOf(quotas[pos])+"MB/s");
+            //LOG.info("Test_Info: DataNode:"+DataXceiverServerID+"  "+clientname+"  "+String.valueOf(quotas[pos])+"MB/s");
         }catch(Exception ex){
             LOG.warn("Exception in NameNodeRpcServer:ComputeQuota"+ex);
             quotas[pos]=0;
@@ -1497,7 +1498,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         pos++;
     return quotas;
   }
- 
+  
   @Override // DatanodeProtocol
   public DatanodeCommand blockReport(final DatanodeRegistration nodeReg,
         String poolId, final StorageBlockReport[] reports,

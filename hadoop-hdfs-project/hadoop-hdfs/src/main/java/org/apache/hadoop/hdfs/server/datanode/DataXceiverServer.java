@@ -281,8 +281,8 @@ class DataXceiverServer implements Runnable {
         DfsClientProcessInfo newclient=new DfsClientProcessInfo(clientname);
         newclient.update(ioquota,iospeed,datasize);
         statisticInfo.put(clientname,newclient);
-        //LOG.info("Test_Info:First "+clientname+" DataSize:"+String.valueOf(newclient.getDataSize())+" IOSpeed:"+String.valueOf(newclient.getIOSpeed())+" Quota:"+
-        //        String.valueOf(ioquota));
+        LOG.info("Test_Info:First "+clientname+" DataSize:"+String.valueOf(newclient.getDataSize())+" IOSpeed:"+String.valueOf(newclient.getIOSpeed())+" Quota:"+
+                String.valueOf(ioquota));
     }
   }
  
