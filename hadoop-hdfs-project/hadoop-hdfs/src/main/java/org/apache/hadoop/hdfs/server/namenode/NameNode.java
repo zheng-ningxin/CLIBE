@@ -197,7 +197,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 @InterfaceAudience.Private
 public class NameNode implements NameNodeStatusMXBean {
   public static final long FeedBackPeriodDuration=2*1000;
-  public static final double SlowNodeThresHold=0.8;
+  public static final double SlowNodeThresHold=0.6;
   public static final double DATABLOCKSIZE=128.0;
   public static final double IOSPEED_THRESHOLD=100.0;
   class DfsClientInfo{
@@ -1135,19 +1135,21 @@ public class NameNode implements NameNodeStatusMXBean {
     double nodeIOSpeed=NodeIOInfo.getQuota()*nodeEffect;
     //AtomicInteger appquotaowed = AppQuotaOwed.get(appid);
     if(nodeEffect<SlowNodeThresHold){
-        double tmpEffect=Math.min((nodeEffect+0.1),1.0);
+        double tmpEffect=Math.min((nodeEffect+0.2),1.0);
         int tmp=(int)(allocatedquota*tmpEffect);
+        LOG.info("Test_Info: "+DataXceiverServerID+" "+clientname+" Ori_Quota:"+String.valueOf(allocatedquota)+" Effect:"+String.valueOf(tmpEffect)+" Quota:"+String.valueOf(tmp));
         allocatedquota=tmp;
-        LOG.info("Test_Info: "+DataXceiverServerID+" "+clientname+" Effect:"+String.valueOf(tmpEffect)+" Quota:"+String.valueOf(allocatedquota));
+
     }else{
         IOInfo ClientInfo=DfsClientsFeedBackIOInfo.get(clientname);
         double avgspeed=ClientInfo.getIOSpeed();
         long dataprocessed=ClientInfo.getDataSize();
         double tmp;
         if(dataprocessed!=0){
+
             tmp=DATABLOCKSIZE/ ((dataprocessed+DATABLOCKSIZE)/allocatedquota-dataprocessed/avgspeed);
-            if(tmp>IOSPEED_THRESHOLD){
-                tmp=IOSPEED_THRESHOLD;
+            if(tmp>IOSPEED_THRESHOLD || tmp<0 ){
+                tmp=0;  //no speed limit
             }
             allocatedquota=(int)tmp;
         }
@@ -1159,7 +1161,7 @@ public class NameNode implements NameNodeStatusMXBean {
   public int ComputeQuotaNoFeedback(String DataXceiverServerID,String clientname){
       String appid=getAppIdUsingClient(clientname);
       int allocatedquota= getAppQuotaUsingClient(clientname)/getAppClientNum(appid);
-      //LOG.info("Test_Info Nofeedback"+DataXceiverServerID+"  IOQuota:"+String.valueOf(allocatedquota));
+      LOG.info("Test_Info Nofeedback"+DataXceiverServerID+"  IOQuota:"+String.valueOf(allocatedquota));
       return allocatedquota;
   }
   public synchronized int registerApplication(String userId, String clientName, String appId, int appQuota){

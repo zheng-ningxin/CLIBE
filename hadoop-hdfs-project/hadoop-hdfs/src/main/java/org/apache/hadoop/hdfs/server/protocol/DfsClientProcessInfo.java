@@ -31,28 +31,25 @@ public class DfsClientProcessInfo{
     private double IOSpeedAverage;
     //The size of data processed during the last feedback time slice
     private double DataSize;
-    public DfsClientProcessInfo(String clientname){
-        this.clientname=clientname;
-        IOQuotaAverage=1000000000.0;
-        IOSpeedAverage=1000000000.0;
-        DataSize=0.0;
-    }
+
     public DfsClientProcessInfo(String clientname,double ioquota,double iospeed,double datasize){
+        if(ioquota<1e-3) ioquota=iospeed;   //we take the quota lower than 0 as no limit
         this.clientname=clientname;
         this.IOQuotaAverage=ioquota;
         this.IOSpeedAverage=iospeed;
         this.DataSize=datasize;
+
     }
     public synchronized void update(double quota,double iospeed,double datasize){
-        DataSize+=datasize;
         double time=datasize*1.0/iospeed+DataSize/IOSpeedAverage;
         IOSpeedAverage=(datasize+DataSize)/time;
-        if(quota< 1e-9){
-            return ;
+        DataSize+=datasize;
+        if(quota< 1e-3){
+            quota=iospeed;
         }
         //Quota maybe zero which means that infinite IO Bandwidth quota
-        IOQuotaAverage=(DataSize+datasize)/(DataSize/IOQuotaAverage+datasize/quota);
-        //IOQuotaAverage=(DataSize*IOQuotaAverage+datasize*quota)/(DataSize+datasize);
+        IOQuotaAverage=(DataSize)/((DataSize-datasize)/IOQuotaAverage+datasize/quota);
+        //IOQuotaAverage=((DataSize-datasize)*IOQuotaAverage+datasize*quota)/(DataSize);
 
         
     }

@@ -569,7 +569,6 @@ class DataXceiver extends Receiver implements Runnable {
     IOQuota = dataXceiverServer.getIOBandwidthQuotaUsingDfsclient(clientName);
     if(IOQuota <0){
         IOQuota=0;
-        isinfinite=true;
         //LOG.warn("IOBandwidth Quota allocated is lower than zero!!\n");
     }
     DataTransferThrottler IOthrottler=null;
@@ -634,11 +633,8 @@ class DataXceiver extends Receiver implements Runnable {
       datanode.metrics.incrTotalReadTime(duration);
       //update statistic information
       //duration in milliseconds
-      if(!isinfinite){
-        double IOSpeed=length/1024.0/1024*1000.0/duration;
-        dataXceiverServer.updateAfterRequestFinished(clientName,1.0*IOQuota,IOSpeed,length/1024/1024*1.0);
-      }       
-    
+      double IOSpeed=length/1024.0/1024*1000.0/duration;
+      dataXceiverServer.updateAfterRequestFinished(clientName,1.0*IOQuota,IOSpeed,length/1024/1024*1.0);
     } catch ( SocketException ignored ) {
       if (LOG.isTraceEnabled()) {
         LOG.trace(dnR + ":Ignoring exception while serving " + block + " to " +
@@ -942,11 +938,11 @@ class DataXceiver extends Receiver implements Runnable {
     //update statistic information
     long duration=Time.monotonicNow()-beginWrite;
     //duration in milliseconds
-    if(!infinite){
-        double length=block.getNumBytes()/1024.0/1024;    //Use MB as the unit
-        double IOSpeed=length*1000.0/duration;
-        dataXceiverServer.updateAfterRequestFinished(clientname,1.0*IOQuota,IOSpeed,length*1.0);
-    }
+
+    double length=block.getNumBytes()/1024.0/1024;    //Use MB as the unit
+    double IOSpeed=length*1000.0/duration;
+    dataXceiverServer.updateAfterRequestFinished(clientname,1.0*IOQuota,IOSpeed,length*1.0);
+
 
     //update metrics
     datanode.getMetrics().addWriteBlockOp(elapsed());
