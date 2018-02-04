@@ -633,8 +633,10 @@ class DataXceiver extends Receiver implements Runnable {
       datanode.metrics.incrTotalReadTime(duration);
       //update statistic information
       //duration in milliseconds
-      double IOSpeed=length/1024.0/1024*1000.0/duration;
-      dataXceiverServer.updateAfterRequestFinished(clientName,1.0*IOQuota,IOSpeed,length/1024/1024*1.0);
+      if(dataXceiverServer.FeedbackON){
+        double IOSpeed=length/1024.0/1024*1000.0/duration;
+        dataXceiverServer.updateAfterRequestFinished(clientName,1.0*IOQuota,IOSpeed,length/1024/1024*1.0);
+      }
     } catch ( SocketException ignored ) {
       if (LOG.isTraceEnabled()) {
         LOG.trace(dnR + ":Ignoring exception while serving " + block + " to " +
@@ -935,15 +937,15 @@ class DataXceiver extends Receiver implements Runnable {
       IOUtils.closeStream(blockReceiver);
       setCurrentBlockReceiver(null);
     }
-    //update statistic information
-    long duration=Time.monotonicNow()-beginWrite;
-    //duration in milliseconds
+    if(dataXceiverServer.FeedbackON) {
+      //update statistic information
+      long duration = Time.monotonicNow() - beginWrite;
+      //duration in milliseconds
+      double length = block.getNumBytes() / 1024.0 / 1024;    //Use MB as the unit
+      double IOSpeed = length * 1000.0 / duration;
+      dataXceiverServer.updateAfterRequestFinished(clientname, 1.0 * IOQuota, IOSpeed, length * 1.0);
 
-    double length=block.getNumBytes()/1024.0/1024;    //Use MB as the unit
-    double IOSpeed=length*1000.0/duration;
-    dataXceiverServer.updateAfterRequestFinished(clientname,1.0*IOQuota,IOSpeed,length*1.0);
-
-
+    }
     //update metrics
     datanode.getMetrics().addWriteBlockOp(elapsed());
     datanode.getMetrics().incrWritesFromClient(peer.isLocal(), size);

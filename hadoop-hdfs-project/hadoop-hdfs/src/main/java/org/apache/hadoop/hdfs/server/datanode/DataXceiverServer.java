@@ -69,7 +69,7 @@ class DataXceiverServer implements Runnable {
 
   private final Configuration conf;
   private DatanodeProtocolClientSideTranslatorPB bpNamenode=null;
-
+  public final boolean FeedbackON;
 
   /**
    * Maximal number of concurrent xceivers per node.
@@ -157,6 +157,8 @@ class DataXceiverServer implements Runnable {
         conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
             DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT));
     this.conf=conf;
+    FeedbackON=conf.getBoolean("fs.namenode.feedback",false);
+    LOG.info("Test_Info: Feedback mechanism on: "+ String.valueOf(FeedbackON));
   }
  
 
@@ -180,7 +182,8 @@ class DataXceiverServer implements Runnable {
           .getNNServiceRpcAddressesForCluster(conf);
         FeedBackManager=new FeedBackManagerDatanodeSide(datanode,this);
         Thread FeedBackManagerThread=new Thread(FeedBackManager);
-        FeedBackManagerThread.start();
+        if(FeedbackON)
+            FeedBackManagerThread.start();
     }catch(Exception ex){
         LOG.warn("Exception happend in DataXceiverServer startFeedBackManagerDatanodeSide "+ex);
     }  
@@ -275,14 +278,16 @@ class DataXceiverServer implements Runnable {
     if(statisticInfo.containsKey(clientname)){
         statisticInfo.get(clientname).update(ioquota,iospeed,datasize);
         DfsClientProcessInfo info=statisticInfo.get(clientname);
-        LOG.info("Test_Info: "+clientname+" ioquota:"+String.valueOf(ioquota)+" iospeed:"+String.valueOf(iospeed)+" datasize:"+String.valueOf(datasize)+
+        /*LOG.info("Test_Info: "+clientname+" ioquota:"+String.valueOf(ioquota)+" iospeed:"+String.valueOf(iospeed)+" datasize:"+String.valueOf(datasize)+
                 " DataSize:"+String.valueOf(info.getDataSize())+" IOSpeed:"+String.valueOf(info.getIOSpeed())+" Quota:"+String.valueOf(info.getIOQuota()));
+        */
     }else{
         DfsClientProcessInfo newclient=new DfsClientProcessInfo(clientname,ioquota,iospeed,datasize);
         statisticInfo.put(clientname,newclient);
-        LOG.info("Test_Info:First "+clientname+" ioquota:"+String.valueOf(ioquota)+" iospeed:"+String.valueOf(iospeed)+" datasize:"+String.valueOf(datasize)+
+        /*LOG.info("Test_Info:First "+clientname+" ioquota:"+String.valueOf(ioquota)+" iospeed:"+String.valueOf(iospeed)+" datasize:"+String.valueOf(datasize)+
                 " DataSize:"+String.valueOf(newclient.getDataSize())+" IOSpeed:"+String.valueOf(newclient.getIOSpeed())+" Quota:"+
                 String.valueOf(newclient.getIOQuota()));
+        */
     }
   }
  

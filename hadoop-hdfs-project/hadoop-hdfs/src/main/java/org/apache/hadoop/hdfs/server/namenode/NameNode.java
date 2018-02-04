@@ -1089,7 +1089,7 @@ public class NameNode implements NameNodeStatusMXBean {
     }else{
         DataNodesFeedBackIOInfo.put(DataXceiverServerID,new IOInfo(SumDataSize,IOQuotaAvg,Effect));
     }
-    LOG.info("Test_Statistic "+DataXceiverServerID+" SumDataSize:"+String.valueOf(SumDataSize)+" Quota:"+String.valueOf(IOQuotaAvg)+" Speed:"+String.valueOf(IOSpeedAvg));
+    //LOG.info("Test_Statistic "+DataXceiverServerID+" SumDataSize:"+String.valueOf(SumDataSize)+" Quota:"+String.valueOf(IOQuotaAvg)+" Speed:"+String.valueOf(IOSpeedAvg));
   }
    
   private synchronized void AppAddOneClient(String appId){
@@ -1137,7 +1137,7 @@ public class NameNode implements NameNodeStatusMXBean {
     if(nodeEffect<SlowNodeThresHold){
         double tmpEffect=Math.min((nodeEffect+0.2),1.0);
         int tmp=(int)(allocatedquota*tmpEffect);
-        LOG.info("Test_Info: "+DataXceiverServerID+" "+clientname+" Ori_Quota:"+String.valueOf(allocatedquota)+" Effect:"+String.valueOf(tmpEffect)+" Quota:"+String.valueOf(tmp));
+        //LOG.info("Test_Info: "+DataXceiverServerID+" "+clientname+" Ori_Quota:"+String.valueOf(allocatedquota)+" Effect:"+String.valueOf(tmpEffect)+" Quota:"+String.valueOf(tmp));
         allocatedquota=tmp;
 
     }else{
@@ -1153,7 +1153,7 @@ public class NameNode implements NameNodeStatusMXBean {
             }
             allocatedquota=(int)tmp;
         }
-        LOG.info("Test_Info: "+DataXceiverServerID+" DataProcessed: "+String.valueOf(dataprocessed)+" AVGSPEED:"+String.valueOf(avgspeed)+" "+clientname+" Quota:"+String.valueOf(allocatedquota));
+        //LOG.info("Test_Info: "+DataXceiverServerID+" DataProcessed: "+String.valueOf(dataprocessed)+" AVGSPEED:"+String.valueOf(avgspeed)+" "+clientname+" Quota:"+String.valueOf(allocatedquota));
     }
 
     return allocatedquota;
@@ -1161,7 +1161,7 @@ public class NameNode implements NameNodeStatusMXBean {
   public int ComputeQuotaNoFeedback(String DataXceiverServerID,String clientname){
       String appid=getAppIdUsingClient(clientname);
       int allocatedquota= getAppQuotaUsingClient(clientname)/getAppClientNum(appid);
-      LOG.info("Test_Info Nofeedback"+DataXceiverServerID+"  IOQuota:"+String.valueOf(allocatedquota));
+      //LOG.info("Test_Info Nofeedback"+DataXceiverServerID+"  IOQuota:"+String.valueOf(allocatedquota));
       return allocatedquota;
   }
   public synchronized int registerApplication(String userId, String clientName, String appId, int appQuota){
